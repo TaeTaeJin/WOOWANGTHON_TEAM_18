@@ -19,7 +19,7 @@ reviews:
         - Flag code that catches an AI/API failure and returns a canned or empty result that looks like success,
           unless it carries a `MOCK(<id>)` marker (docs/conventions.md F-1).
         - Every new `MOCK(<id>)` / `SAMPLE(<id>)` marker needs a matching row in docs/ai-scope.md §3 in the same PR.
-        - A new AI model, external API, library or dataset needs docs/ai-scope.md updated in the same PR.
+        - Adding, swapping or removing an AI model, external API, library or dataset needs docs/ai-scope.md updated in the same PR.
         - A changed request/response shape between FE, BE and AI needs docs/design.md §3 updated.
         Prefer the simplest code that makes the demo path work; flag speculative abstractions (docs/conventions.md F-2).
     - path: "docs/**"
