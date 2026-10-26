@@ -1,6 +1,6 @@
 # Code Conventions
 
-The checkable form of [`AGENTS.md`](../AGENTS.md) §1 and §3. Language-specific style (naming, formatting, imports)
+The checkable form of [`CLAUDE.md`](../CLAUDE.md) §1 and §3. Language-specific style (naming, formatting, imports)
 is whatever the stack's formatter and linter enforce — chosen in [`adr/001-stack.md`](adr/001-stack.md), not restated here.
 
 ## 1. Markers: `MOCK(<id>)` and `SAMPLE(<id>)`
@@ -68,4 +68,16 @@ genuinely wanted, it is a `MOCK(<id>)` and gets declared.
 
 - Prefix: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`, `docs:`. Subject ≤ 70 chars; body says why.
 - Message language: Korean or English, whichever the author writes faster.
-- Branch `<type>/<slug>`; PR into `main`; squash merge. See [`AGENTS.md`](../AGENTS.md) §5.
+- Branch `<type>/<slug>`; PR into `main`; squash merge. See [`CLAUDE.md`](../CLAUDE.md) §5.
+
+## 6. Tests and mutation testing (TBD)
+
+Pending [`adr/001-stack.md`](adr/001-stack.md), which is still a proposal: the test library and the mutation tool are chosen with the stack.
+Until then the rule in [`CLAUDE.md`](../CLAUDE.md) §2 step 4 stands — code and tests are a pair, and mutation testing runs on the changed code before the PR.
+
+Fill in once the stack is decided:
+
+- Test file location and naming.
+- Mutation tool, and its scope (changed files only, to keep it fast).
+- What counts as an acceptable surviving mutant.
+- How test doubles relate to `MOCK(<id>)` markers (§1) — a fake used only inside tests is not a demo-path mock; state where the line is.

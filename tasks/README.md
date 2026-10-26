@@ -10,7 +10,7 @@ Only for work that spans **more than one commit** or more than one session. A on
 ## Rules
 
 - One file per task: `tasks/YYYYMMDD-<slug>.md`, English, copied from the template below.
-- Link the SRS `FR-xx` it serves. No FR → ask before building ([`AGENTS.md`](../AGENTS.md) §2).
+- Link the SRS `FR-xx` it serves. No FR → ask before building ([`CLAUDE.md`](../CLAUDE.md) §2).
 - When done, set `Status: done` and fill **Lessons**. The file stays where it is — no archive step.
 - A lesson worth keeping for everyone goes into [`CLAUDE.md`](../CLAUDE.md) Pitfalls or [`docs/conventions.md`](../docs/conventions.md) in the same PR.
 - The [`devlog`](../.claude/skills/devlog/SKILL.md) skill reads files touched today, so keep **Log** current.

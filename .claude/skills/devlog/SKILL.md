@@ -65,7 +65,7 @@ Title: `YYYY-MM-DD · <이름>` (`· 팀` with `--team`).
 
 ### 4. Write to Notion
 
-1. Read the **Notion devlog DB** URL from [`AGENTS.md`](../../../AGENTS.md) §0. If it is `TBD`, stop and ask for it.
+1. Read the **Notion devlog DB** URL from [`CLAUDE.md`](../../../CLAUDE.md) §0. If it is `TBD`, stop and ask for it.
 2. Fetch the database with the Notion MCP and map to its real properties (title, date, author). Do not assume names.
 3. Search the database for an entry with the same title. If one exists, **update it** — never create a duplicate.
 4. Otherwise create a page in that database with the composed body.
