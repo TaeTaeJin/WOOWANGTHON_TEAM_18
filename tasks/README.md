@@ -1,43 +1,12 @@
 # Tasks
 
-Working notes for agents and teammates. The team's kanban lives in Notion; these files hold what an agent
-needs to pick the work back up — the plan, the done-check, and what was learned.
+Working notes for agents and teammates; the team's kanban lives in Notion. The `active/` listing is the index — there is no index table.
 
-## When to create one
-
-Only for work that spans **more than one commit** or more than one session. A one-commit fix needs no file.
-
-## Rules
-
-- One file per task: `tasks/YYYYMMDD-<slug>.md`, English, copied from the template below.
-- Link the SRS `FR-xx` it serves. No FR → ask before building ([`CLAUDE.md`](../CLAUDE.md) §2).
-- When done, set `Status: done` and fill **Lessons**. The file stays where it is — no archive step.
-- A lesson worth keeping for everyone goes into [`CLAUDE.md`](../CLAUDE.md) Pitfalls or [`docs/conventions.md`](../docs/conventions.md) in the same PR.
-- The [`devlog`](../.claude/skills/devlog/SKILL.md) skill reads files touched today, so keep **Log** current.
-
-## Template
-
-```markdown
-# <Task title>
-
-- **Status**: active | done
-- **SRS**: FR-xx
-- **Owner**: <name>
-- **Branch**: <type>/<slug>
-
-## Plan
-
-1. <slice> — files: `...`
-
-## Done when
-
-- [ ] <observable check, e.g. "demo step 2 works on the deployed URL">
-
-## Log
-
-- YYYY-MM-DD: <what happened, decisions, blockers>
-
-## Lessons
-
-<filled when done: what surprised us, what to do differently>
-```
+- **When**: work that spans more than one commit or session. A one-commit fix needs no file.
+- **Pair**: every task has two files, so planning and what actually happened stay apart.
+  - `YYYYMMDD-<slug>-todo.md` — what to do: plan, todo list, done-when. Copy [`templates/todo.md`](templates/todo.md).
+  - `YYYYMMDD-<slug>-lessons.md` — what happened along the way: dated log, then lessons. Copy [`templates/lessons.md`](templates/lessons.md).
+- **Layout**: in progress → `active/`; done → `archive/` (flat, no date folders).
+- **Finish**: fill **Lessons** in the task's PR and leave both files in `active/`. There is no status field; a maintainer sweeps the pairs whose PR has merged into `archive/` once a week (one `chore:` PR), so nobody needs a follow-up PR just to move files.
+- **devlog**: the [`devlog`](../.claude/skills/devlog/SKILL.md) skill reads the `SRS` field in the todo and the dated **Log** lines in the lessons file — keep them current.
+- Files are in English.

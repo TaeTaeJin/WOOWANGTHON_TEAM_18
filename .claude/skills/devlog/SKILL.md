@@ -33,7 +33,7 @@ git status --porcelain -- tasks/
 
 With `--team`, drop `--author` / `author:@me` / `--author @me`.
 
-Then read the task files and ADRs that appeared: their **Log** lines for the date, and any ADR status change.
+Then read the task pairs and ADRs that appeared: the `SRS` field in each `-todo.md`, the **Log** lines for the date in each `-lessons.md`, and any ADR status change. A listed path that no longer exists was moved from `tasks/active/` to `tasks/archive/` — read it there.
 
 ### 2. Ask for what git cannot know
 
@@ -59,7 +59,7 @@ Title: `YYYY-MM-DD · <이름>` (`· 팀` with `--team`).
 - <from the user>
 ```
 
-- Group commits by feature, not one line per commit. Use the FR ID from the task file or PR.
+- Group commits by feature, not one line per commit. Use the FR ID from the todo file or PR.
 - Link PRs and ADRs with full GitHub URLs (`gh repo view --json url -q .url`), so they open from Notion.
 - No secrets, tokens, `.env` values or test-account passwords — the page is shared publicly.
 
