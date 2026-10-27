@@ -14,7 +14,7 @@ accounts ([`hackathon.md`](hackathon.md) §구현 및 공개 범위). Markers ma
 | `SAMPLE(<id>):` | Real code running on prepared or synthetic data | seed users, demo dataset, test account |
 
 ```ts
-// MOCK(ai-summary-stub): returns a fixed summary until the LLM call lands (FR-03)
+// MOCK(ai-summary-stub): returns a fixed summary until the LLM call lands (FR-02-01)
 ```
 
 ```python
@@ -51,7 +51,7 @@ genuinely wanted, it is a `MOCK(<id>)` and gets declared.
 
 **Forbidden**: changing a request/response shape between FE, BE and AI in code only.
 
-**Instead**: edit [`design.md`](design.md) §3 in the same PR, and tell the other side.
+**Instead**: edit [`design/api.md`](design/api.md) in the same PR, and tell the other side.
 
 ## 3. Secrets
 

@@ -3,13 +3,13 @@
 > The **single entry point** for this repository. Every AI agent and teammate reads this before starting work.
 > Project rules live **only in this file**. `AGENTS.md` just imports it (for tools that read `AGENTS.md`).
 > If personal or global instructions conflict with this repo's rules, the repo rules win.
-> **Language**: reply to the user in Korean. Agent-facing files (this file, skills, `docs/conventions.md`, `tasks/`) are written in English; human-facing docs (`docs/SRS.md`, `hackathon`, `design`, `adr/`, `ai-scope`, `pitch`) and PR descriptions are written in Korean.
+> **Language**: reply to the user in Korean. Agent-facing files (this file, skills, `docs/conventions.md`, `tasks/`) are written in English; human-facing docs (`docs/SRS.md`, `hackathon`, `design/`, `adr/`, `ai-scope`, `pitch`) and PR descriptions are written in Korean.
 
 ## 0. Project (TBD)
 
 - **What**: TBD — one sentence on the product. Full requirements: [`docs/SRS.md`](docs/SRS.md).
 - **Who**: Team 18 왕가네식구들 (`@woowangthon/18`), 2026 AI 우왕톤 — theme *"AI는 동료가 될 수 있을까?"*
-- **Stack**: TBD — decided in [`docs/adr/001-stack.md`](docs/adr/001-stack.md). Architecture and the FE/BE/AI contract: [`docs/design.md`](docs/design.md).
+- **Stack**: TBD — decided in [`docs/adr/001-stack.md`](docs/adr/001-stack.md). Architecture: [`docs/SRS.md`](docs/SRS.md) §2. Module designs and the FE/BE/AI contract: [`docs/design/`](docs/design/README.md).
 - **Repo**: [`woowangthon/WOOWANGTHON_TEAM_18`](https://github.com/woowangthon/WOOWANGTHON_TEAM_18) (`upstream`, judged) — one monorepo. Code under `apps/*` (TBD), docs under `docs/`, task notes under `tasks/`.
 - **Notion devlog DB**: TBD — the URL the [`devlog`](.claude/skills/devlog/SKILL.md) skill writes to.
 
@@ -21,15 +21,15 @@ Source of every fact here: [`docs/hackathon.md`](docs/hackathon.md).
 2. **No faked results.** Never hardcode an output and present it as live behavior. Mocks, samples and test accounts are allowed **only** when marked in code (`MOCK(<id>):` / `SAMPLE(<id>):`, see [`docs/conventions.md`](docs/conventions.md)) and listed in [`docs/ai-scope.md`](docs/ai-scope.md).
 3. **AI scope is declared.** Adding, swapping or removing an AI model, external API, library or dataset updates [`docs/ai-scope.md`](docs/ai-scope.md) in the same commit — including features where AI is *not* applied or *not* verified.
 4. **No secrets in git.** API keys go in `.env` (git-ignored) and the deploy platform's env settings. The repo is public.
-5. **The demo path works first.** P0 features in `docs/SRS.md` are the demo path. Nothing P1 lands while a P0 is broken.
+5. **The demo path works first.** P0 use cases in `docs/SRS.md` §3.2 are the demo path. Nothing P1 lands while a P0 is broken.
 
 ## 2. How we work (SDD + Task Workflow)
 
 We adopt [Spec-Driven Development](https://github.com/github/spec-kit) **as a methodology only** — no slash commands, no extra tooling. Skip a step only when it truly does not apply; keep the order. A one-commit fix needs no task pair.
 
 0. **Principles** — before starting, read [§3 Coding principles](#3-coding-principles) and [`docs/conventions.md`](docs/conventions.md).
-1. **Spec** — find the `FR-xx` this work serves in [`docs/SRS.md`](docs/SRS.md). No FR → ask before building.
-2. **Plan** — write down the approach and trade-offs before touching code (no over-engineering). A decision that is expensive to reverse (stack, data store, AI model, API shape) gets an [ADR](docs/adr/README.md). Before changing an API between FE/BE/AI, update the contract in [`docs/design.md`](docs/design.md) first.
+1. **Spec** — find the `UC-xx` and `FR-xx-yy` this work serves in [`docs/SRS.md`](docs/SRS.md) (§3 use cases, §4 functional requirements, §5 non-functional). No FR → ask before building.
+2. **Plan** — write down the approach and trade-offs before touching code (no over-engineering). A decision that is expensive to reverse (stack, data store, AI model, API shape) gets an [ADR](docs/adr/README.md). A module's internal design goes in [`docs/design/`](docs/design/README.md) right before you implement it. Before changing an API between FE/BE/AI, update [`docs/design/api.md`](docs/design/api.md) first.
 3. **Task** — work spanning more than one commit or session gets a [task pair](tasks/README.md) in `tasks/active/`: `YYYYMMDD-<slug>-todo.md` (what to do: **Plan**, **Todo**, **Done when**) and `YYYYMMDD-<slug>-lessons.md` (what happened along the way: **Log**, **Lessons**), copied from `tasks/templates/`. Update the Log as you go.
 4. **Branch + build** — branch from `upstream/main`. **Code and tests are a pair**: a behavior change lands with its tests in the same commit, never "tests later". Define the success criteria first, write tests that fail without the change, implement, and iterate until green. Before opening the PR, run **mutation testing** on the code you changed; every surviving mutant gets either a new test or a one-line reason in the PR body. Every commit passes lint and tests. The test and mutation tools are chosen with the stack ([`docs/adr/001-stack.md`](docs/adr/001-stack.md)) and their commands go in [Commands](#commands). Commit format: [§5](#5-git).
 5. **Self review (recommended)** — before opening the PR, run `/code-review` and `/simplify` once on the branch (the review level is your call), fix what is real, and re-run the tests. Skip on trivial changes; a teammate's review is the gate. Whether an agent can launch them depends on its harness (`/code-review ultra` is always user-triggered); when it cannot, say so and ask — never let a skipped review read as a clean one. Non-blocking findings you leave become known limitations in the PR body.
@@ -57,8 +57,8 @@ Checkable rules: [`docs/conventions.md`](docs/conventions.md).
 | When you need | Read |
 | --- | --- |
 | Hackathon rules, schedule, scoring, submissions | [`docs/hackathon.md`](docs/hackathon.md) |
-| What to build, priorities, demo scenario | [`docs/SRS.md`](docs/SRS.md) |
-| Architecture, FE/BE/AI API contract | [`docs/design.md`](docs/design.md) |
+| What to build (UC / FR / NFR), architecture, demo scenario | [`docs/SRS.md`](docs/SRS.md) |
+| Module design, FE/BE/AI API contract | [`docs/design/`](docs/design/README.md) |
 | Why a technical choice was made | [`docs/adr/`](docs/adr/README.md) |
 | Code rules, markers, commits | [`docs/conventions.md`](docs/conventions.md) |
 | What is AI / mock / external / unverified | [`docs/ai-scope.md`](docs/ai-scope.md) |

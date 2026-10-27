@@ -83,10 +83,10 @@
 
 | 사전 평가 · 80점 | 배점 | 우리 문서 |
 | --- | --- | --- |
-| 문제 정의 | 20 | [`SRS.md`](SRS.md) §1–2 |
-| 아이디어의 차별성 | 15 | [`SRS.md`](SRS.md) §2 |
-| 구현 완성도 | 25 | 배포 링크 · 시연 영상 · [`SRS.md`](SRS.md) P0 |
-| 기술 설계·이해도 | 10 | [`design.md`](design.md) · [`adr/`](adr/README.md) |
+| 문제 정의 | 20 | [`SRS.md`](SRS.md) §1.1–1.4 |
+| 아이디어의 차별성 | 15 | [`SRS.md`](SRS.md) §1.2–1.4 |
+| 구현 완성도 | 25 | 배포 링크 · 시연 영상 · [`SRS.md`](SRS.md) §3.2 P0 |
+| 기술 설계·이해도 | 10 | [`SRS.md`](SRS.md) §2 · [`design/`](design/README.md) · [`adr/`](adr/README.md) |
 | AI 활용도 | 10 | [`ai-scope.md`](ai-scope.md). **AI 미사용 시 0점** |
 
 | 현장 평가 · 20점 | 배점 |
