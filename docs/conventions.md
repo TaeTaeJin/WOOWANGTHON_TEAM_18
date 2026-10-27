@@ -1,7 +1,7 @@
 # Code Conventions
 
 The checkable form of [`CLAUDE.md`](../CLAUDE.md) §1 and §3. Language-specific style (naming, formatting, imports)
-is whatever the stack's formatter and linter enforce — chosen in [`adr/001-stack.md`](adr/001-stack.md), not restated here.
+is whatever the stack's formatter and linter enforce — chosen with the stack (see [`adr/README.md`](adr/README.md)), not restated here.
 
 ## 1. Markers: `MOCK(<id>)` and `SAMPLE(<id>)`
 
@@ -27,7 +27,7 @@ Rules:
 - The comment says what is fake and, for a MOCK, what replaces it.
 - Removing the mock removes the marker and the row.
 - A mock still in the demo path at submission is disclosed in the video (`모킹` caption) and the deck appendix.
-- CI will check markers against `ai-scope.md` once it exists ([`adr/001-stack.md`](adr/001-stack.md) §결과). Until then: `grep -rnE "(MOCK|SAMPLE)\(" apps/`.
+- CI will check markers against `ai-scope.md` once it exists (a CI item of the stack ADR, see [`adr/README.md`](adr/README.md)). Until then: `grep -rnE "(MOCK|SAMPLE)\(" apps/`.
 
 ## 2. Forbidden shapes
 
@@ -72,7 +72,7 @@ genuinely wanted, it is a `MOCK(<id>)` and gets declared.
 
 ## 6. Tests and mutation testing (TBD)
 
-Pending [`adr/001-stack.md`](adr/001-stack.md), which is still a proposal: the test library and the mutation tool are chosen with the stack.
+Pending the stack ADR ([`adr/README.md`](adr/README.md)): the test library and the mutation tool are chosen with the stack.
 Until then the rule in [`CLAUDE.md`](../CLAUDE.md) §2 step 4 stands — code and tests are a pair, and mutation testing runs on the changed code before the PR.
 
 Fill in once the stack is decided:
