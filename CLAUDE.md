@@ -22,7 +22,7 @@ Source of every fact here: [`docs/hackathon.md`](docs/hackathon.md).
 2. **No faked results.** Never hardcode an output and present it as live behavior. Mocks, samples and test accounts are allowed **only** when marked in code (`MOCK(<id>):` / `SAMPLE(<id>):`, see [`docs/conventions.md`](docs/conventions.md)) and listed in [`docs/ai-scope.md`](docs/ai-scope.md).
 3. **AI scope is declared.** Adding, swapping or removing an AI model, external API, library or dataset updates [`docs/ai-scope.md`](docs/ai-scope.md) in the same commit — including features where AI is *not* applied or *not* verified.
 4. **No secrets in git.** API keys go in `.env` (git-ignored) and the deploy platform's env settings. The repo is public.
-5. **The demo path works first.** P0 use cases in `docs/SRS.md` §3.2 are the demo path. Nothing P1 lands while a P0 is broken.
+5. **The demo path works first.** P0 use cases in `docs/SRS.md` §3.2 are the demo path. No P1 work starts until every P0 works.
 
 ## 2. Coding principles
 

@@ -15,7 +15,7 @@ We adopt [Spec-Driven Development](https://github.com/github/spec-kit) **as a me
 4. **Branch + build** — branch from `upstream/main`. **Code and tests are a pair**: a behavior change lands with its tests in the same commit, never "tests later". Define the success criteria first, write tests that fail without the change, implement, and iterate until green. Before opening the PR, run **mutation testing** on the code you changed; every surviving mutant gets either a new test or a one-line reason in the PR body. Every commit passes lint and tests. The test and mutation tools are chosen with the stack ([ADR](docs/adr/README.md)) and their commands go in [Commands](CLAUDE.md#commands). Commit format: [§2](#2-git).
 5. **Self review (recommended)** — before opening the PR, run `/code-review` and `/simplify` once on the branch (the review level is your call), fix what is real, and re-run the tests. Skip on trivial changes; a teammate's review is the gate. Whether an agent can launch them depends on its harness (`/code-review ultra` is always user-triggered); when it cannot, say so and ask — never let a skipped review read as a clean one. Non-blocking findings you leave become known limitations in the PR body.
 6. **Sync + open PR** — `git fetch upstream && git rebase upstream/main` to surface conflicts before pushing. Title ≤70 chars; body = the [PR template](.github/pull_request_template.md). CodeRabbit reviews every PR automatically.
-7. **Address review** — evaluate each finding technically; push back with reasoning when wrong. Reply in the comment thread, not top-level (`gh api repos/woowangthon/WOOWANGTHON_TEAM_18/pulls/{pr}/comments/{id}/replies`). If `main` moved during review, rebase again.
+7. **Address review** — evaluate each finding technically; push back with reasoning when wrong. Reply in the comment thread, not top-level (`gh api repos/woowangthon/WOOWANGTHON_TEAM_18/pulls/{pr}/comments/{id}/replies -f body='...'`). If `main` moved during review, rebase again.
 8. **Before merge / done** — confirm CI green and one teammate's approval. If the UI or a flow changed, walk the demo path yourself. Fill the lessons file's **Lessons** in the PR; leave the files in `tasks/active/` — a maintainer sweeps merged tasks into `tasks/archive/` weekly. A lesson worth keeping for everyone goes into [Pitfalls](CLAUDE.md#pitfalls) or [`docs/conventions.md`](docs/conventions.md) in the same PR. Squash merge, then start a new session for the next task. At the end of the day, run `devlog` to post to Notion ([`.claude/skills/`](.claude/skills/README.md)).
 
 **`gh` and remotes**: pass `--repo` explicitly to any `gh` command run outside this directory or when switching between `upstream` and `origin`, so it never targets the fork by accident.
@@ -37,7 +37,9 @@ We adopt [Spec-Driven Development](https://github.com/github/spec-kit) **as a me
 | Place | Holds | Why there |
 | --- | --- | --- |
 | This repo | Spec, decisions, code, task notes | Agents read it; it is what gets judged |
-| Notion team page | Meetings, kanban, devlog, retro | Required submission; judged for the Notion prize |
+| Notion team page | SRS draft, meetings, kanban, devlog, retro | Required submission; judged for the Notion prize |
 | Discord | Organizer notices and questions (`#질문-문의`) | The official channel |
 
 Decisions made in Notion or chat land here as an ADR or an SRS edit. Sync runs one way, into the repo.
+
+The SRS is written in Notion by the whole team. `docs/SRS.md` follows it through a `docs:` PR that syncs the changes; do not edit `docs/SRS.md` without the matching Notion change.
