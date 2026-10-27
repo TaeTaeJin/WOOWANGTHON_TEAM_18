@@ -13,7 +13,7 @@ What this repository ships for agents, and which external plugins are worth inst
 ### Deliberately not skills
 
 Task files and ADRs are "copy a template, follow one rule" — [`tasks/README.md`](../../tasks/README.md) and
-[`docs/adr/000-template.md`](../../docs/adr/000-template.md) plus the rules in [`CLAUDE.md`](../../CLAUDE.md) §2 are enough.
+[`docs/adr/000-template.md`](../../docs/adr/000-template.md) plus the rules in [`CONTRIBUTING.md`](../../CONTRIBUTING.md) §1 are enough.
 Promote either to a skill only if the same mistake keeps recurring.
 
 Submission checks are not a skill either: they become CI once the stack is decided (checklist in [`docs/adr/README.md`](../../docs/adr/README.md)).
@@ -25,7 +25,7 @@ Pointers, not vendored copies — install the current version from the source.
 
 | Plugin | Why | When |
 | --- | --- | --- |
-| `andrej-karpathy-skills` ([source](https://github.com/multica-ai/andrej-karpathy-skills)) | The four principles in [`CLAUDE.md`](../../CLAUDE.md) §3, as a skill | While writing code |
+| `andrej-karpathy-skills` ([source](https://github.com/multica-ai/andrej-karpathy-skills)) | The four principles in [`CLAUDE.md`](../../CLAUDE.md) §2, as a skill | While writing code |
 | `code-review` (`/plugin install code-review@claude-plugins-official`) | Catches bugs before the PR. You choose the review level (`low` gives few, high-confidence findings; higher levels cost more) | Before opening a PR on a non-trivial change |
 | `/simplify` (built in) | Finds over-built code that still works — the shape [`docs/conventions.md`](../../docs/conventions.md) F-2 forbids | Before opening a PR |
 

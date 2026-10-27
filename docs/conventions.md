@@ -1,6 +1,6 @@
 # Code Conventions
 
-The checkable form of [`CLAUDE.md`](../CLAUDE.md) §1 and §3. Language-specific style (naming, formatting, imports)
+The checkable form of [`CLAUDE.md`](../CLAUDE.md) §1 and §2. Language-specific style (naming, formatting, imports)
 is whatever the stack's formatter and linter enforce — chosen with the stack (see [`adr/README.md`](adr/README.md)), not restated here.
 
 ## 1. Markers: `MOCK(<id>)` and `SAMPLE(<id>)`
@@ -68,12 +68,12 @@ genuinely wanted, it is a `MOCK(<id>)` and gets declared.
 
 - Prefix: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`, `docs:`. Subject ≤ 70 chars; body says why.
 - Message language: Korean or English, whichever the author writes faster.
-- Branch `<type>/<slug>`; PR into `main`; squash merge. See [`CLAUDE.md`](../CLAUDE.md) §5.
+- Branch `<type>/<slug>`; PR into `main`; squash merge. See [`CONTRIBUTING.md`](../CONTRIBUTING.md) §2.
 
 ## 6. Tests and mutation testing (TBD)
 
 Pending the stack ADR ([`adr/README.md`](adr/README.md)): the test library and the mutation tool are chosen with the stack.
-Until then the rule in [`CLAUDE.md`](../CLAUDE.md) §2 step 4 stands — code and tests are a pair, and mutation testing runs on the changed code before the PR.
+Until then the rule in [`CONTRIBUTING.md`](../CONTRIBUTING.md) §1 step 4 stands — code and tests are a pair, and mutation testing runs on the changed code before the PR.
 
 Fill in once the stack is decided:
 

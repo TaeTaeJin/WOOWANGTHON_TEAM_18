@@ -32,4 +32,5 @@ knowledge_base:
     enabled: true
     filePatterns:
       - "CLAUDE.md"
+      - "CONTRIBUTING.md"
       - "docs/conventions.md"
