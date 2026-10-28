@@ -9,6 +9,7 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+    auto_incremental_review: false
   path_instructions:
     - path: "**/*"
       instructions: |
@@ -20,16 +21,17 @@ reviews:
           unless it carries a `MOCK(<id>)` marker (docs/conventions.md F-1).
         - Every new `MOCK(<id>)` / `SAMPLE(<id>)` marker needs a matching row in docs/ai-scope.md §3 in the same PR.
         - Adding, swapping or removing an AI model, external API, library or dataset needs docs/ai-scope.md updated in the same PR.
-        - A changed request/response shape between FE, BE and AI needs docs/design.md §3 updated.
+        - A changed request/response shape between FE, BE and AI needs docs/design/api.md updated.
         Prefer the simplest code that makes the demo path work; flag speculative abstractions (docs/conventions.md F-2).
     - path: "docs/**"
       instructions: |
         Korean team documents. Check that facts (dates, scores, submission rules) match docs/hackathon.md,
-        and that FR-xx IDs referenced elsewhere exist in docs/SRS.md. Do not nitpick wording.
+        and that FR-NNN IDs referenced elsewhere exist in docs/SRS.md. Do not nitpick wording.
 
 knowledge_base:
   code_guidelines:
     enabled: true
     filePatterns:
-      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "CONTRIBUTING.md"
       - "docs/conventions.md"

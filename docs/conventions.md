@@ -1,7 +1,7 @@
 # Code Conventions
 
-The checkable form of [`AGENTS.md`](../AGENTS.md) §1 and §3. Language-specific style (naming, formatting, imports)
-is whatever the stack's formatter and linter enforce — chosen in [`adr/001-stack.md`](adr/001-stack.md), not restated here.
+The checkable form of [`CLAUDE.md`](../CLAUDE.md) §1 and §2. Language-specific style (naming, formatting, imports)
+is whatever the stack's formatter and linter enforce — chosen with the stack (see [`adr/README.md`](adr/README.md)), not restated here.
 
 ## 1. Markers: `MOCK(<id>)` and `SAMPLE(<id>)`
 
@@ -14,7 +14,7 @@ accounts ([`hackathon.md`](hackathon.md) §구현 및 공개 범위). Markers ma
 | `SAMPLE(<id>):` | Real code running on prepared or synthetic data | seed users, demo dataset, test account |
 
 ```ts
-// MOCK(ai-summary-stub): returns a fixed summary until the LLM call lands (FR-03)
+// MOCK(ai-summary-stub): returns a fixed summary until the LLM call lands (FR-002)
 ```
 
 ```python
@@ -27,7 +27,7 @@ Rules:
 - The comment says what is fake and, for a MOCK, what replaces it.
 - Removing the mock removes the marker and the row.
 - A mock still in the demo path at submission is disclosed in the video (`모킹` caption) and the deck appendix.
-- CI will check markers against `ai-scope.md` once it exists ([`adr/001-stack.md`](adr/001-stack.md) §결과). Until then: `grep -rnE "(MOCK|SAMPLE)\(" apps/`.
+- CI will check markers against `ai-scope.md` once it exists (a CI item of the stack ADR, see [`adr/README.md`](adr/README.md)). Until then: `grep -rnE "(MOCK|SAMPLE)\(" apps/`.
 
 ## 2. Forbidden shapes
 
@@ -51,7 +51,7 @@ genuinely wanted, it is a `MOCK(<id>)` and gets declared.
 
 **Forbidden**: changing a request/response shape between FE, BE and AI in code only.
 
-**Instead**: edit [`design.md`](design.md) §3 in the same PR, and tell the other side.
+**Instead**: edit [`design/api.md`](design/api.md) in the same PR, and tell the other side.
 
 ## 3. Secrets
 
@@ -68,4 +68,16 @@ genuinely wanted, it is a `MOCK(<id>)` and gets declared.
 
 - Prefix: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`, `docs:`. Subject ≤ 70 chars; body says why.
 - Message language: Korean or English, whichever the author writes faster.
-- Branch `<type>/<slug>`; PR into `main`; squash merge. See [`AGENTS.md`](../AGENTS.md) §5.
+- Branch `<type>/<slug>`; PR into `main`; squash merge. See [`CONTRIBUTING.md`](../CONTRIBUTING.md) §2.
+
+## 6. Tests and mutation testing (TBD)
+
+Pending the stack ADR ([`adr/README.md`](adr/README.md)): the test library and the mutation tool are chosen with the stack.
+Until then the rule in [`CONTRIBUTING.md`](../CONTRIBUTING.md) §1 step 4 stands — code and tests are a pair, and mutation testing runs on the changed code before the PR.
+
+Fill in once the stack is decided:
+
+- Test file location and naming.
+- Mutation tool, and its scope (changed files only, to keep it fast).
+- What counts as an acceptable surviving mutant.
+- How test doubles relate to `MOCK(<id>)` markers (§1) — a fake used only inside tests is not a demo-path mock; state where the line is.
