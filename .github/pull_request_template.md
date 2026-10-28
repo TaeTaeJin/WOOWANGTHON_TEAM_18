@@ -6,7 +6,7 @@
 
 ## Why
 
-<!-- SRS의 FR-xx-yy 또는 tasks/active/의 todo 파일 링크. 결정이 있었다면 ADR 링크. -->
+<!-- SRS의 FR-NNN 또는 tasks/active/의 todo 파일 링크. 결정이 있었다면 ADR 링크. -->
 
 ## Linked Issues
 

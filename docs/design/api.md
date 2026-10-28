@@ -7,7 +7,7 @@ FE·BE·AI가 서로를 기다리지 않도록 **요청·응답 모양을 먼저
 
 ## <그룹명> (SRS §2.4)
 
-### `METHOD /path` — 한 줄 설명 (FR-xx-yy)
+### `METHOD /path` — 한 줄 설명 (FR-NNN)
 
 요청:
 

@@ -1,6 +1,6 @@
 # <Task title>
 
-- **SRS**: FR-xx
+- **SRS**: FR-NNN
 - **Owner**: <name>
 - **Branch**: <type>/<slug>
 

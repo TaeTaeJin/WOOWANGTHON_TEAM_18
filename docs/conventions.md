@@ -14,7 +14,7 @@ accounts ([`hackathon.md`](hackathon.md) §구현 및 공개 범위). Markers ma
 | `SAMPLE(<id>):` | Real code running on prepared or synthetic data | seed users, demo dataset, test account |
 
 ```ts
-// MOCK(ai-summary-stub): returns a fixed summary until the LLM call lands (FR-02-01)
+// MOCK(ai-summary-stub): returns a fixed summary until the LLM call lands (FR-002)
 ```
 
 ```python

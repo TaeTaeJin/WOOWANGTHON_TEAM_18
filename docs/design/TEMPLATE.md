@@ -1,7 +1,7 @@
 # <모듈명> — 설계
 
 - **상태**: 초안 | 합의됨 (YYYY-MM-DD) | 구현됨
-- **관련**: SRS UC-xx, FR-xx-yy · [ADR-NNN](../adr/README.md) (있으면)
+- **관련**: SRS UC-xx, FR-NNN · [ADR-NNN](../adr/README.md) (있으면)
 
 ## 범위
 

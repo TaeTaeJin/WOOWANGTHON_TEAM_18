@@ -47,7 +47,7 @@ Title: `YYYY-MM-DD · <이름>` (`· 팀` with `--team`).
 
 ```markdown
 ## 오늘 한 일
-- <what changed, in user-facing words> (FR-xx) — PR #n / `abc1234`
+- <what changed, in user-facing words> (FR-NNN) — PR #n / `abc1234`
 
 ## 결정
 - <decision> — [ADR-NNN](link) or task file

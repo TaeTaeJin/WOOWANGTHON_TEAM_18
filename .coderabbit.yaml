@@ -9,6 +9,7 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+    auto_incremental_review: false
   path_instructions:
     - path: "**/*"
       instructions: |
@@ -25,7 +26,7 @@ reviews:
     - path: "docs/**"
       instructions: |
         Korean team documents. Check that facts (dates, scores, submission rules) match docs/hackathon.md,
-        and that FR-xx IDs referenced elsewhere exist in docs/SRS.md. Do not nitpick wording.
+        and that FR-NNN IDs referenced elsewhere exist in docs/SRS.md. Do not nitpick wording.
 
 knowledge_base:
   code_guidelines:
