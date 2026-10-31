@@ -18,12 +18,12 @@ The MVP scope was cut once more without touching the core path (deploy -> review
 - [x] Review round: 8 read-only review agents + code-review + simplify; fix the high and medium findings
 - [x] Align the diagrams with the document (deploy.status removed, MySQL only, domain 11/11, cost estimate AWS-only, Playground default public)
 - [x] Update `ai-scope.md` (MySQL, Traefik, Vite, scanner candidate, "AI not applied" rows, domain limit)
-- [x] Add the repo directory layout (`FE/ BE/ AI/ Infra/`) and drop every `apps/` reference
+- [x] Add the repo directory layout (`FE/ BE/ AI/ Infra/`) and drop the `apps/` references in the files of this PR (`.coderabbit.yaml` and `docs/conventions.md` still have them and go in the follow-up PR)
 
 ## Done when
 
 - [x] every relative link and anchor in `docs/system-definition.md` resolves; table column counts match
-- [x] no leftover "apps/", "deploy.status", "도메인 없음", e-mail alerts or "(설계만)" on a core feature in the document or the six edited diagrams
+- [x] no leftover "apps/" in this PR's files, no "deploy.status", "도메인 없음", e-mail alerts or "(설계만)" on a core feature in the document or the six edited diagrams
 - [x] each edited SVG embeds exactly one tab and keeps its tab name
 - [x] the document and the six edited diagrams agree on Kafka events, DB choice, domain, cost estimate, Playground default, spike handling and the core / add-on split (checked by a final read-only review)
 - [x] the committed files are exactly the ones listed in Plan; SRS, `.coderabbit.yaml` and `docs/conventions.md` are left out

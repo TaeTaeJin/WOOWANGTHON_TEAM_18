@@ -65,6 +65,7 @@
 | 클라우드 요금표 (AWS 먼저, Vercel · Cloudflare는 시간이 남으면) | AWS Price List ([문서](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/finding-prices-in-service-price-list-files.html)), Vercel · Cloudflare 공개 요금 페이지 | 공개 가격 정보. 기준일을 표기하고 손으로 관리한다 | 비용 추정의 입력 (AI가 요금표와 지표로 월 추정치를 계산, 추정 · 참고용) |
 | 선행 사례 — 부산대 2024 졸업과제(컨테이너 오케스트레이션 기반 서버리스 프로젝트 배포 시스템) | [기술보고서 2024-10](https://snbl.pusan.ac.kr/bbs/cse/12607/916565/download.do) | 공개 보고서. 아이디어만 비교하고 코드·문구는 가져오지 않는다 | [SRS](SRS.md) §1.4 비교 |
 | 기존 서비스 비교 조사 (Cloudtype, KT·NHN·Naver Cloud, Coolify 등) | [Coolify CVE-2026-34057](https://nvd.nist.gov/vuln/detail/CVE-2026-34057) 외 각 제품 문서·블로그. 2026-10-31 조사, **2차 출처가 많다** | 공개 정보. 가격·기능은 발표 전 공식 문서로 재확인한다 | [SRS](SRS.md) §1.4 비교 (AI 기능이 아님) |
+| LLM 코드 리뷰어 우회 사례 (큰 파일에 악성 로직을 묻으면 탐지율이 떨어진다는 보도) | [Security Brief Asia](https://securitybrief.asia/story/cloudflare-warns-of-ai-code-review-prompt-injection) — **2차 보도, 원문 미확인** | 공개 기사 | §5 "AI 검토는 단독 판정자가 아니다"의 근거 |
 | 무료 코드 실행 환경 남용 사례 (Heroku 무료 플랜 폐지) | [TechCrunch 2022-08-25](https://techcrunch.com/2022/08/25/heroku-announces-plans-to-eliminate-free-plans-blaming-fraud-and-abuse) | 공개 기사 | 승인 게이트의 필요성 근거 |
 | | | | |
 
