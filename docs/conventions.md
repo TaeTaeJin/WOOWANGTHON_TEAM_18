@@ -27,7 +27,7 @@ Rules:
 - The comment says what is fake and, for a MOCK, what replaces it.
 - Removing the mock removes the marker and the row.
 - A mock still in the demo path at submission is disclosed in the video (`모킹` caption) and the deck appendix.
-- CI will check markers against `ai-scope.md` once it exists (a CI item of the stack ADR, see [`adr/README.md`](adr/README.md)). Until then: `grep -rnE "(MOCK|SAMPLE)\(" apps/`.
+- CI will check markers against `ai-scope.md` once it exists (a CI item of the stack ADR, see [`adr/README.md`](adr/README.md)). Until then: `git grep -nE "(MOCK|SAMPLE)\(" -- FE BE AI Infra`.
 
 ## 2. Forbidden shapes
 
