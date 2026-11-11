@@ -6,6 +6,7 @@
 - 2026-11-11: The peers asked for the field path `secrets.<service>.<KEY>` (same as the start API's `NOT_READY`), so the error paths use the root `secrets` while the request body field stays `services`.
 - 2026-11-11: An e2e test with a malformed body that contains a secret showed that Nest turns V8's JSON error (`Unexpected token 'l', "<start of the body>" is not valid JSON`) into a `BadRequestException` whose message goes back in the response. `ApiExceptionFilter` now answers a fixed text for it.
 - 2026-11-11: `deploy_secrets` is keyed by slug and service, not by deploy, so a later deploy of the same project with the same keys is `in` without sending again.
+- 2026-11-11: `/simplify` applied: `taggedSha256` reused, `validateSecrets` early return, `SecretsService.statusOf(spec)` (owner-free read for #82), the parse-error rule now fail-closed (every `BadRequestException` without `code`), the store's merge header derived from `on_conflict`. Left as known limits: concurrent PUTs on the same slug+service can interleave (the last `in` digest may not match the cluster); the per-service digest is an unsalted sha256 (an HMAC with a server pepper or a random generation id would remove the offline-guess risk, but `deploy-handoff.md` says "sha256 of the values", so ask the W4/W5 owner); `k8s` imports three regexes from `deploys/deploy-input` (leaf file, no cycle yet).
 
 ## Lessons
 

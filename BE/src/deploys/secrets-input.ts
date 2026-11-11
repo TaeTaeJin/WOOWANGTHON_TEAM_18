@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto'
 import { isRecord } from '../common/is-record.js'
+import { taggedSha256 } from './deploy-condition.js'
 import { type Issue, isEnvName, MAX_ISSUES, SERVICE_NAME, type Spec } from './deploy-input.js'
 import type { SecretRow } from './deploys.store.js'
 
@@ -26,53 +26,51 @@ export function validateSecrets(input: unknown, spec: Spec): { ok: true; values:
     issues.push({ path, code })
   }
 
-  if (input === undefined) add('secrets', 'REQUIRED')
-  else if (!isRecord(input)) add('secrets', 'INVALID_TYPE')
-  else if (Object.keys(input).length === 0) add('secrets', 'REQUIRED')
+  if (!isRecord(input)) {
+    add('secrets', input === undefined ? 'REQUIRED' : 'INVALID_TYPE')
+    return { ok: false, issues }
+  }
+  if (Object.keys(input).length === 0) add('secrets', 'REQUIRED')
 
   const values: SecretValues = new Map()
-  if (isRecord(input)) {
-    for (const [name, raw] of Object.entries(input)) {
-      const service = spec.services.find((s) => s.name === name)
-      // 이름이 서비스 이름 모양이 아니면 응답에 싣지 않고 한 칸 위 경로로 알린다.
-      if (!service) {
-        add(SERVICE_NAME.test(name) ? `secrets.${name}` : 'secrets', 'UNKNOWN_SERVICE')
-        continue
-      }
-      const path = `secrets.${name}`
-      if (!isRecord(raw)) {
-        add(path, 'INVALID_TYPE')
-        continue
-      }
-      const expected = service.runtime.secretKeys
-      const given: Record<string, string> = {}
-      for (const key of expected) {
-        const value = Object.hasOwn(raw, key) ? raw[key] : undefined
-        if (value === undefined) add(`${path}.${key}`, 'REQUIRED')
-        else if (typeof value !== 'string') add(`${path}.${key}`, 'INVALID_TYPE')
-        else if (value.trim() === '') add(`${path}.${key}`, 'REQUIRED')
-        else if (value.length > MAX_SECRET_LENGTH) add(`${path}.${key}`, 'OUT_OF_RANGE')
-        else given[key] = value
-      }
-      for (const key of Object.keys(raw)) {
-        if (!expected.includes(key)) add(isEnvName(key) ? `${path}.${key}` : path, 'UNKNOWN_KEY')
-      }
-      values.set(name, given)
+  for (const [name, raw] of Object.entries(input)) {
+    const service = spec.services.find((s) => s.name === name)
+    // 이름이 서비스 이름 모양이 아니면 응답에 싣지 않고 한 칸 위 경로로 알린다.
+    if (!service) {
+      add(SERVICE_NAME.test(name) ? `secrets.${name}` : 'secrets', 'UNKNOWN_SERVICE')
+      continue
     }
+    const path = `secrets.${name}`
+    if (!isRecord(raw)) {
+      add(path, 'INVALID_TYPE')
+      continue
+    }
+    const expected = service.runtime.secretKeys
+    const given: Record<string, string> = {}
+    for (const key of expected) {
+      const value = Object.hasOwn(raw, key) ? raw[key] : undefined
+      if (value === undefined) add(`${path}.${key}`, 'REQUIRED')
+      else if (typeof value !== 'string') add(`${path}.${key}`, 'INVALID_TYPE')
+      else if (value.trim() === '') add(`${path}.${key}`, 'REQUIRED')
+      else if (value.length > MAX_SECRET_LENGTH) add(`${path}.${key}`, 'OUT_OF_RANGE')
+      else given[key] = value
+    }
+    for (const key of Object.keys(raw)) {
+      if (!expected.includes(key)) add(isEnvName(key) ? `${path}.${key}` : path, 'UNKNOWN_KEY')
+    }
+    values.set(name, given)
   }
   return issues.length === 0 ? { ok: true, values } : { ok: false, issues }
 }
 
-const sha256 = (text: string) => `sha256:${createHash('sha256').update(text, 'utf8').digest('hex')}`
-
 /** 서비스의 key · 값 쌍의 해시. key 순으로 정렬해 같은 값이면 항상 같다. JSON 배열이라 경계가 모호하지 않다. */
 export function serviceDigest(values: Record<string, string>): string {
-  return sha256(JSON.stringify(Object.keys(values).sort().map((key) => [key, values[key]])))
+  return taggedSha256(JSON.stringify(Object.keys(values).sort().map((key) => [key, values[key]])))
 }
 
 /** 서비스별 해시를 이름 순으로 합친 W4용 `secretHash`. */
 export function combineDigests(parts: { name: string; digest: string }[]): string {
-  return sha256(JSON.stringify(parts.map((p) => [p.name, p.digest]).sort((a, b) => (a[0] < b[0] ? -1 : 1))))
+  return taggedSha256(JSON.stringify(parts.map((p) => [p.name, p.digest]).sort((a, b) => (a[0] < b[0] ? -1 : 1))))
 }
 
 export interface SecretStatus {

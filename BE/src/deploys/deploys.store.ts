@@ -126,7 +126,7 @@ export class DeploysStore {
 
   /** 서비스의 비밀값 상태를 쓴다(없으면 만들고 있으면 바꾼다). */
   async setSecretState(slug: string, service: string, state: Omit<SecretRow, 'service'>): Promise<void> {
-    const rows = await this.call('deploy_secrets', 'POST', { on_conflict: 'slug,service' }, { slug, service, ...state, updated_at: new Date().toISOString() }, true)
+    const rows = await this.call('deploy_secrets', 'POST', { on_conflict: 'slug,service' }, { slug, service, ...state, updated_at: new Date().toISOString() })
     if (rows.length !== 1) throw this.unreadable('deploy_secrets', 'POST')
   }
 
@@ -135,7 +135,6 @@ export class DeploysStore {
     method: 'GET' | 'POST',
     query: Record<string, string>,
     body?: object,
-    merge = false,
   ): Promise<unknown[]> {
     const qs = new URLSearchParams(query).toString()
     const url = `${this.restUrl}/${table}`
@@ -145,7 +144,7 @@ export class DeploysStore {
         // 새 secret key는 JWT가 아니라 Authorization 헤더로 보내면 거부된다. apikey 하나로 보낸다.
         headers: {
           apikey: this.secretKey,
-          ...(body ? { 'Content-Type': 'application/json', Prefer: `return=representation${merge ? ',resolution=merge-duplicates' : ''}` } : {}),
+          ...(body ? { 'Content-Type': 'application/json', Prefer: `return=representation${query.on_conflict ? ',resolution=merge-duplicates' : ''}` } : {}),
         },
         body: body ? JSON.stringify(body) : undefined,
         signal: AbortSignal.timeout(TIMEOUT_MS),

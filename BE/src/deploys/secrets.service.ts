@@ -5,6 +5,7 @@ import { SpaceService } from '../k8s/space.service.js'
 import { SecretService } from '../k8s/secret.service.js'
 import { DeploysService } from './deploys.service.js'
 import { DeploysStore } from './deploys.store.js'
+import type { Spec } from './deploy-input.js'
 import { type SecretStatus, secretStatus, serviceDigest, validateSecrets } from './secrets-input.js'
 
 /** 비밀값 받기 · 상태 읽기(W3). 계약은 docs/design/api.md "비밀값", 값이 거치는 곳은 docs/design/auth.md "비밀값". */
@@ -20,6 +21,11 @@ export class SecretsService {
   /** 내 배포의 비밀값 상태. 없는 id · 남의 id는 404다(DeploysService.get과 같다). 리더는 부르지 않는다. */
   async status(user: AuthUser, id: string): Promise<SecretStatus> {
     const { spec } = await this.deploys.get(user, id)
+    return this.statusOf(spec)
+  }
+
+  /** 소유자 확인 없이 spec의 비밀값 상태를 읽는다(배포 시작 쪽 #82가 이미 소유자를 확인한 뒤 부른다). */
+  async statusOf(spec: Spec): Promise<SecretStatus> {
     return secretStatus(spec, await this.store.secretRows(spec.project.slug))
   }
 
@@ -54,6 +60,6 @@ export class SecretsService {
         await this.store.setSecretState(slug, name, { keys, status: 'in', digest: serviceDigest(values) })
       }
     }
-    return secretStatus(spec, await this.store.secretRows(slug))
+    return this.statusOf(spec)
   }
 }

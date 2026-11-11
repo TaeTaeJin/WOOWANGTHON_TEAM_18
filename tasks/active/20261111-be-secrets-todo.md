@@ -21,10 +21,10 @@ Left for the #82 PR: `DeployReadinessService.prepareIfReady(deployId)` (calls `D
 - [x] Body-parse error message no longer repeated (it carries a piece of the body) — files: `BE/src/common/api-exception.filter.ts`
 - [x] Tests: unit (validation, hashes with independently computed values, status), `SecretService` against a fake k8s, e2e through the app with a fake Supabase and a fake k8s; checks that no value is in any response, log, database row or request to the database
 - [x] Hand mutants (no BE mutation tool, #67): 41 mutants on the changed decision lines, 41 killed (one equivalent-looking survivor was a test gap: a `writing` row with a stale digest, now tested)
-- [ ] `pnpm verify`, `/code-review low`, `/simplify`
+- [x] `pnpm verify`, `/code-review low`, `/simplify`
 
 ## Done when
 
-- [ ] `pnpm verify` exit code 0 seen
+- [x] `pnpm verify` exit code 0 seen
 - [ ] PR body says "실제 클러스터 미확인" and that the migration was not applied to the real Supabase
 - [ ] tests added; mutation survivors resolved or explained
