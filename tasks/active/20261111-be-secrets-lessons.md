@@ -1,0 +1,14 @@
+# BE: secrets (W3) — lessons
+
+## Log
+
+- 2026-11-11: Stacked on `feat/be-k8s-space` (PR #106). Contract written and committed first, then sent to the FE session (#83). FE asked for partial per-key sends; the write-only RBAC (no `get`, no `patch`) makes that impossible, so a send replaces the service's whole Secret. Decided with that reason in the contract.
+- 2026-11-11: The peers asked for the field path `secrets.<service>.<KEY>` (same as the start API's `NOT_READY`), so the error paths use the root `secrets` while the request body field stays `services`.
+- 2026-11-11: An e2e test with a malformed body that contains a secret showed that Nest turns V8's JSON error (`Unexpected token 'l', "<start of the body>" is not valid JSON`) into a `BadRequestException` whose message goes back in the response. `ApiExceptionFilter` now answers a fixed text for it.
+- 2026-11-11: `deploy_secrets` is keyed by slug and service, not by deploy, so a later deploy of the same project with the same keys is `in` without sending again.
+
+## Lessons
+
+- A "no values anywhere" claim needs a test that looks at every place at once (response, logs, database rows, requests to the database), with several malformed inputs. The first malformed-body test passed because its input did not trigger the leaking message.
+- Record the state in the safe direction first (`writing`) and promote it after the external write; then a crash or a failure never leaves a state that claims more than is true.
+- Worth promoting: the body-parse message pitfall is added to `BE/CLAUDE.md` Pitfalls.

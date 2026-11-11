@@ -364,19 +364,19 @@ FE가 select에 넣을 허용 값: `role` = `fe` · `be` · `ai`, `runtime.kind`
 
 오류:
 
-- `400 INVALID_SECRETS`: `error.fields`에 `{ path, code }` 목록(`INVALID_SPEC`과 같은 방식, 최대 20개). **값은 응답 · 로그에 싣지 않고 key와 서비스 이름만 알린다.**
+- `400 INVALID_SECRETS`: `error.fields`에 `{ path, code }` 목록(`INVALID_SPEC`과 같은 방식, 최대 20개). 경로는 요청 본문의 `services`가 아니라 `secrets.<서비스>.<KEY>`로 쓴다(배포 시작의 `NOT_READY`가 빠진 key를 알리는 모양과 같다). **값은 응답 · 로그에 싣지 않고 key와 서비스 이름만 알린다.**
 
 | `code` | `path` | 뜻 |
 | --- | --- | --- |
-| `REQUIRED` | `services` | 서비스가 하나도 없다 |
-| `REQUIRED` | `services.<서비스>.<KEY>` | 그 key가 빠졌다, 값이 비었거나 공백뿐이다 |
-| `INVALID_TYPE` | `services` · `services.<서비스>` · `services.<서비스>.<KEY>` | 객체여야 할 곳이 아니거나, 값이 문자열이 아니다 |
-| `OUT_OF_RANGE` | `services.<서비스>.<KEY>` | 값이 8,192자를 넘는다 |
-| `UNKNOWN_SERVICE` | `services.<서비스>` | 이 배포에 없는 서비스다 |
-| `UNKNOWN_KEY` | `services.<서비스>.<KEY>` | 이 서비스의 `secretKeys`에 없는 key다 |
+| `REQUIRED` | `secrets` | 서비스가 하나도 없다 |
+| `REQUIRED` | `secrets.<서비스>.<KEY>` | 그 key가 빠졌다, 값이 비었거나 공백뿐이다 |
+| `INVALID_TYPE` | `secrets` · `secrets.<서비스>` · `secrets.<서비스>.<KEY>` | 객체여야 할 곳이 아니거나, 값이 문자열이 아니다 |
+| `OUT_OF_RANGE` | `secrets.<서비스>.<KEY>` | 값이 8,192자를 넘는다 |
+| `UNKNOWN_SERVICE` | `secrets.<서비스>` | 이 배포에 없는 서비스다 |
+| `UNKNOWN_KEY` | `secrets.<서비스>.<KEY>` | 이 서비스의 `secretKeys`에 없는 key다 |
 
-  이름이 서비스 이름 · env 이름 모양이 아니면 그 이름은 응답에 싣지 않고 한 칸 위 경로로 알린다(`services` · `services.<서비스>`). 한 칸에는 코드가 하나만 남는다.
-- `401 AUTH_REQUIRED` · `401 INVALID_TOKEN`, `404 DEPLOY_NOT_FOUND`(없는 `id` · 남의 배포 · UUID가 아닌 `id`), `413 PAYLOAD_TOO_LARGE`(100KB 초과), `400 BAD_REQUEST`(본문이 JSON 객체가 아님 — 이때도 본문 내용은 응답 · 로그에 싣지 않는다).
+  이름이 서비스 이름 · env 이름 모양이 아니면 그 이름은 응답에 싣지 않고 한 칸 위 경로로 알린다(`secrets` · `secrets.<서비스>`). 한 칸에는 코드가 하나만 남는다.
+- `401 AUTH_REQUIRED` · `401 INVALID_TOKEN`, `404 DEPLOY_NOT_FOUND`(없는 `id` · 남의 배포 · UUID가 아닌 `id`), `413 PAYLOAD_TOO_LARGE`(100KB 초과), `400 BAD_REQUEST`(본문이 JSON 객체가 아니거나 JSON으로 읽을 수 없다 — 파서의 오류 문구는 본문 조각을 담을 수 있어 `Request body is not valid JSON`으로 바꿔 돌려주고, 본문 내용은 응답 · 로그에 싣지 않는다).
 - `503 CLUSTER_UNAVAILABLE`: 리더에 닿지 못했거나, 서버의 클러스터 접속 설정이 없거나, 거절당했다. 사용자 잘못이 아니므로 **입력한 값을 남겨 두고 다시 시도하게 한다.** 쓴 서비스는 `in`이 되지 않는다(이미 `in`이던 서비스를 다시 보내다 실패하면 그 서비스는 `missing`으로 바뀐다. 새 값이 들어갔는지 알 수 없어서이고, 다시 보내면 된다).
 - `503 DATABASE_UNAVAILABLE`: 상태를 저장하지 못했다. 같은 이유로 다시 보내면 된다.
 

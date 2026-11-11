@@ -35,31 +35,45 @@ export class K8sClient {
     this.conn = url && token && ca ? { url: new URL(url), token, ca } : undefined
   }
 
-  /** `path`에 객체를 만든다. 이미 있으면(409 AlreadyExists)도 성공이다. */
-  async create(path: string, body: object): Promise<void> {
+  /** `path`에 객체를 만든다. 이미 있으면(409 AlreadyExists) 'exists'(실패가 아니다). */
+  async create(path: string, body: object): Promise<'created' | 'exists'> {
+    const answer = await this.send('POST', path, body)
+    if (answer.status === 201) return 'created'
+    if (answer.status === 409 && answer.reason === 'AlreadyExists') return 'exists'
+    throw this.refused('POST', path, answer)
+  }
+
+  /** 있는 객체를 통째로 바꾼다(`path`는 객체 주소). 서버 계정은 읽기 · patch 권한이 없어 resourceVersion 없이 덮어쓴다. */
+  async replace(path: string, body: object): Promise<void> {
+    const answer = await this.send('PUT', path, body)
+    if (answer.status !== 200 && answer.status !== 201) throw this.refused('PUT', path, answer)
+  }
+
+  private async send(method: 'POST' | 'PUT', path: string, body: object): Promise<Answer> {
     if (!this.conn) {
       this.logger.error('Cluster access is not configured (K8S_API_URL, K8S_TOKEN, K8S_CA_CERT)')
       throw clusterUnavailable()
     }
-    let answer: Answer
     try {
-      answer = await this.post(this.conn, path, JSON.stringify(body))
+      return await this.request(this.conn, method, path, JSON.stringify(body))
     } catch (err) {
       // 오류 메시지에는 리더의 주소와 포트가 들어 있어 코드(ECONNREFUSED · TimeoutError 등)만 남긴다.
-      this.logger.error(`POST ${path} failed: ${errorCode(err)}`)
+      this.logger.error(`${method} ${path} failed: ${errorCode(err)}`)
       throw clusterUnavailable()
     }
-    if (answer.status === 201 || (answer.status === 409 && answer.reason === 'AlreadyExists')) return
-    // 응답의 message는 객체 값을 담을 수 있어 싣지 않는다. 상태와 reason이면 어느 경우인지 알 수 있다.
-    this.logger.error(`POST ${path} answered ${answer.status}${answer.reason ? ` ${answer.reason}` : ''}`)
-    throw clusterUnavailable()
   }
 
-  private post({ url, token, ca }: { url: URL; token: string; ca: string }, path: string, payload: string): Promise<Answer> {
+  // 응답의 message는 객체 값을 담을 수 있어 싣지 않는다. 상태와 reason이면 어느 경우인지 알 수 있다.
+  private refused(method: string, path: string, answer: Answer) {
+    this.logger.error(`${method} ${path} answered ${answer.status}${answer.reason ? ` ${answer.reason}` : ''}`)
+    return clusterUnavailable()
+  }
+
+  private request({ url, token, ca }: { url: URL; token: string; ca: string }, method: string, path: string, payload: string): Promise<Answer> {
     const secure = url.protocol === 'https:'
     return new Promise((resolve, reject) => {
       const options = {
-        method: 'POST',
+        method,
         // 경로는 서버가 만든 문자열이다(slug는 검증을 통과한 값).
         path,
         headers: {
