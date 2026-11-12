@@ -7,6 +7,8 @@ import { AgentClient } from '../src/deploys/agent.client.js'
 import { DeployConditionService } from '../src/deploys/deploy-condition.service.js'
 import { DeployPreparer } from '../src/deploys/deploy-preparer.js'
 import { combineDigests, serviceDigest } from '../src/deploys/secrets-input.js'
+import { ClusterError } from '../src/k8s/cluster-error.js'
+import { ClusterReader, type PodInfo } from '../src/k8s/cluster-reader.js'
 import { errorBody, JWKS_URL, keySet, token } from './auth-helpers.js'
 import { startApp } from './start-app.js'
 
@@ -35,6 +37,8 @@ let aiAnswer: () => Response
 let restOverride: ((table: string, method: string) => Response | undefined) | undefined
 // 가짜 준비 확인(#82). 기본은 준비됨이고 슬롯은 a다.
 let prepare: (deployId: string) => Promise<unknown>
+// 가짜 클러스터 리더(Pod 로그). 기본은 클러스터 설정이 없는 서버처럼 읽기가 실패한다.
+const cluster = { pods: vi.fn<(slug: string) => Promise<PodInfo[]>>(), logs: vi.fn<(slug: string, pod: string, options?: object) => Promise<string>>() }
 let app: INestApplication<App>
 let logError: MockInstance<Logger['error']>
 
@@ -169,9 +173,13 @@ beforeEach(async () => {
   prepare = (id) => Promise.resolve(preparedFor(id))
   restOverride = undefined
   fetchMock.mockClear()
+  cluster.pods.mockReset().mockRejectedValue(new ClusterError('unconfigured'))
+  cluster.logs.mockReset().mockRejectedValue(new ClusterError('unconfigured'))
   vi.stubGlobal('fetch', fetchMock)
   logError = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined)
-  app = await startApp([], (b) => b.overrideProvider(DeployPreparer).useValue({ prepareIfReady: (id: string) => prepare(id) }))
+  app = await startApp([], (b) =>
+    b.overrideProvider(DeployPreparer).useValue({ prepareIfReady: (id: string) => prepare(id) }).overrideProvider(ClusterReader).useValue(cluster),
+  )
 })
 
 afterEach(async () => {
@@ -729,6 +737,66 @@ describe('POST /api/pipeline/notify', () => {
       expect(run(id)).toMatchObject({ status: 'fixing', ticket_id: ticket.ticketId })
       expect(ticket.raw).toEqual({ codebuild: null, k8s: { pod: null, events: [{ reason: 'BackOff' }], status: null } })
       expect(ticket.logs.lines).toEqual([])
+    })
+
+    describe('pod logs the pipeline cannot read (it has no pod log access)', () => {
+      const pod = (over: Partial<PodInfo> = {}): PodInfo => ({ name: 'be-a-7d9', labels: { app: 'be', slot: 'a' }, phase: 'Running', node: 'w1', ready: false, restarts: 0, waiting: null, ...over })
+      const noLogs = { service: 'be', message: 'm', raw: { k8s: { events: [] } } }
+
+      it.each(['apply', 'verify'])('fills a %s ticket from the failed service\'s pod in the target slot, with secret-looking strings masked', async (stage) => {
+        cluster.pods.mockResolvedValue([pod()])
+        cluster.logs.mockResolvedValue(`listening\nconnect ${SECRET_LINE}\n`)
+        const id = await reach(stage)
+        await notify({ deployId: id, stage, result: 'failed', failure: noLogs })
+        const { ticket } = bodyOf(callsTo(AI_URL)[0])
+        expect(cluster.pods).toHaveBeenCalledWith('my-app')
+        expect(cluster.logs).toHaveBeenCalledWith('my-app', 'be-a-7d9', { container: 'be', tailLines: 200, sinceSeconds: 600, previous: false })
+        expect(ticket.logs.lines).toEqual(['listening', expect.stringContaining('[REDACTED]') as string])
+        expect(JSON.stringify(ticket)).not.toContain('hunter2pass')
+        expect(JSON.stringify(ticket)).not.toContain(`ghp_${'a'.repeat(36)}`)
+        // 읽은 로그는 저장하지 않는다(진행 상태 · 저장소에 남지 않는다).
+        expect(JSON.stringify(db.deploy_runs)).not.toContain('listening')
+      })
+
+      it('reads the previous container of a pod that restarted', async () => {
+        cluster.pods.mockResolvedValue([pod({ restarts: 4 })])
+        cluster.logs.mockResolvedValue('crashed\n')
+        const id = await reach('apply')
+        await notify({ deployId: id, stage: 'apply', result: 'failed', failure: noLogs })
+        expect(cluster.logs).toHaveBeenCalledWith('my-app', 'be-a-7d9', expect.objectContaining({ previous: true }))
+        expect(bodyOf(callsTo(AI_URL)[0]).ticket.logs.lines).toEqual(['crashed'])
+      })
+
+      it('prefers the logs the pipeline sent and does not read the cluster', async () => {
+        cluster.pods.mockResolvedValue([pod()])
+        const id = await reach('apply')
+        await notify({ deployId: id, stage: 'apply', result: 'failed', failure: { ...noLogs, logs: { from: '2026-11-11T01:00:00Z', to: '2026-11-11T01:10:00Z', lines: ['from the pipeline'] } } })
+        expect(bodyOf(callsTo(AI_URL)[0]).ticket.logs.lines).toEqual(['from the pipeline'])
+        expect(cluster.pods).not.toHaveBeenCalled()
+      })
+
+      it.each([
+        ['listing the pods fails', () => cluster.pods.mockRejectedValue(new ClusterError('unreachable'))],
+        ['reading the log fails', () => (cluster.pods.mockResolvedValue([pod()]), cluster.logs.mockRejectedValue(new ClusterError('unexpected', 400)))],
+      ])('still sends the ticket, with empty logs, when %s', async (_name, breakIt) => {
+        breakIt()
+        const id = await reach('apply')
+        const res = await notify({ deployId: id, stage: 'apply', result: 'failed', failure: noLogs })
+        expect(res.body).toEqual({ ok: true, applied: true })
+        const { ticket } = bodyOf(callsTo(AI_URL)[0])
+        expect(run(id)).toMatchObject({ status: 'fixing', ticket_id: ticket.ticketId })
+        expect(ticket.logs.lines).toEqual([])
+      })
+
+      it.each(['build', 'prepare', 'render'])('does not read the cluster for a %s failure', async (stage) => {
+        cluster.pods.mockResolvedValue([pod()])
+        const id = stage === 'build' ? seedDeploy() : await reach(stage)
+        if (stage === 'build') await start(id)
+        const k8s = stage === 'render' ? { events: [], status: { message: 'rejected' } } : { events: [] }
+        const raw = stage === 'build' ? { codebuild: { id: 'b' } } : { k8s }
+        await notify({ deployId: id, stage, result: 'failed', failure: { service: 'be', message: 'm', raw } })
+        expect(cluster.pods).not.toHaveBeenCalled()
+      })
     })
 
     it('keeps the secret key names in the ticket\'s deploy input (names, not values)', async () => {

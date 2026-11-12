@@ -14,6 +14,7 @@ import { DeploysStore } from './deploys.store.js'
 import { PipelineClient } from './pipeline.client.js'
 import { PipelineController } from './pipeline.controller.js'
 import { PipelineTokenGuard } from './pipeline-token.guard.js'
+import { PodLogs } from './pod-logs.js'
 import { SecretWriter } from './secret-writer.js'
 import { SecretsService } from './secrets.service.js'
 
@@ -27,6 +28,7 @@ import { SecretsService } from './secrets.service.js'
     DeployRunsService,
     PipelineClient,
     AgentClient,
+    PodLogs,
     PipelineTokenGuard,
     SecretsService,
     DeployReadinessService,

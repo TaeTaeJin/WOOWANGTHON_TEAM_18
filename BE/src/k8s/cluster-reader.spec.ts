@@ -204,4 +204,11 @@ describe('ClusterReader', () => {
     await reader.logs('my-app', 'p', { container: 'be', tailLines: 5, previous: true })
     expect(fake.paths).toEqual([`${NS}/pods/p/log?tailLines=5&limitBytes=262144&container=be&previous=true`])
   })
+
+  it('asks only for the last seconds of the log when told to, and rejects a count that is not a positive integer', async () => {
+    await reader.logs('my-app', 'p', { sinceSeconds: 600 })
+    expect(fake.paths).toEqual([`${NS}/pods/p/log?tailLines=200&limitBytes=262144&sinceSeconds=600`])
+    for (const bad of [0, -1, 1.5, Number.NaN]) await expect(reader.logs('my-app', 'p', { sinceSeconds: bad })).rejects.toThrow('sinceSeconds')
+    expect(fake.paths).toHaveLength(1)
+  })
 })

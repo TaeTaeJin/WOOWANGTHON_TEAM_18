@@ -24,6 +24,7 @@ import {
 } from './deploy-run.js'
 import { type DeployRow, type DeployRunRow, DeploysStore, StoreConflict } from './deploys.store.js'
 import { PipelineClient } from './pipeline.client.js'
+import { PodLogs } from './pod-logs.js'
 
 const TICKET_MINUTES = 15
 // 파이프라인(빌드 포함)이 이보다 오래 걸리지 않는다고 본다. 이 시간 동안 아무 알림도 없던 진행 중인 실행은 끝난 것으로 본다.
@@ -98,6 +99,7 @@ export class DeployRunsService {
     private readonly preparer: DeployPreparer,
     private readonly pipeline: PipelineClient,
     private readonly agent: AgentClient,
+    private readonly podLogs: PodLogs,
   ) {}
 
   /** 내 배포 하나. 없는 id · 남의 id · UUID가 아닌 id는 모두 404다. */
@@ -272,8 +274,8 @@ export class DeployRunsService {
     const { failure } = notice
     // 이 함수는 티켓으로 가는 실패에서만 불린다(classifyFailure → callAgent). 그때 validateNotice가 증거를 채워 둔다.
     const { raw, logs: given } = failure.evidence!
-    const now = new Date().toISOString()
-    const logs = given ?? { from: now, to: now, lines: [] }
+    // apply · verify 로그는 실행기가 읽지 못해 BE가 채운다.
+    const logs = await this.podLogs.forTicket(run, notice.stage, failure.service, given, new Date())
     // 외부(AI 서버 · 외부 추론 API)로 나가는 값은 모두 비밀값 필터를 거친다(FR-102).
     const ticket = redact({
       ticketId,
