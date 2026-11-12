@@ -18,11 +18,10 @@ const pod = (over: Partial<PodInfo> = {}): PodInfo => ({
   ...over,
 })
 
+const settle = <T>(value: T | Error) => (value instanceof Error ? Promise.reject(value) : Promise.resolve(value))
+
 function setup(pods: PodInfo[] | Error, text: string | Error = 'line 1\nline 2\n') {
-  const reader = {
-    pods: vi.fn(() => (pods instanceof Error ? Promise.reject(pods) : Promise.resolve(pods))),
-    logs: vi.fn(() => (text instanceof Error ? Promise.reject(text) : Promise.resolve(text))),
-  }
+  const reader = { pods: vi.fn(() => settle(pods)), logs: vi.fn(() => settle(text)) }
   return { reader, podLogs: new PodLogs(reader as unknown as ClusterReader) }
 }
 
@@ -40,13 +39,13 @@ describe('PodLogs.forTicket', () => {
     const logs = await podLogs.forTicket(RUN, stage, 'be', null, NOW)
     expect(logs).toEqual({ from: '2026-11-12T02:50:00.000Z', to: NOW.toISOString(), lines: ['line 1', 'line 2'] })
     expect(reader.pods).toHaveBeenCalledWith('my-app')
-    expect(reader.logs).toHaveBeenCalledWith('my-app', 'be-b-1', { container: 'be', tailLines: 200, sinceSeconds: 600, previous: false })
+    expect(reader.logs).toHaveBeenCalledWith('my-app', 'be-b-1', { container: 'be', tailLines: 200, previous: false })
   })
 
   it('reads the previous container of a pod that restarted', async () => {
     const { reader, podLogs } = setup([pod({ restarts: 1 })])
     await podLogs.forTicket(RUN, 'apply', 'be', null, NOW)
-    expect(reader.logs).toHaveBeenCalledWith('my-app', 'be-b-1', expect.objectContaining({ previous: true }))
+    expect(reader.logs).toHaveBeenCalledWith('my-app', 'be-b-1', { container: 'be', tailLines: 200, previous: true })
   })
 
   it('looks only at the target slot\'s pods of that service, and prefers one that is not ready', async () => {
@@ -106,19 +105,14 @@ describe('PodLogs.forTicket', () => {
   })
 
   it.each([
-    ['there is no pod', [] as PodInfo[], 'x'],
+    ['there is no pod', [] as PodInfo[] | Error, ''],
     ['the pod has no log', [pod()], ''],
     ['the pod log is only a newline', [pod()], '\n'],
-  ])('gives empty logs when %s', async (_name, pods, text) => {
-    expect(await setup(pods, text).podLogs.forTicket(RUN, 'apply', 'be', null, NOW)).toEqual(empty)
-  })
-
-  it.each([
-    ['listing the pods fails', new ClusterError('unreachable'), 'x'],
+    ['listing the pods fails', new ClusterError('unreachable'), ''],
     ['reading the log fails (a pod still waiting to start answers 400)', [pod()], new ClusterError('unexpected', 400)],
-    ['the cluster is not configured', new ClusterError('unconfigured'), 'x'],
-    ['something else throws', new Error('boom'), 'x'],
-  ])('gives empty logs instead of throwing when %s', async (_name, pods, text) => {
+    ['the cluster is not configured', new ClusterError('unconfigured'), ''],
+    ['something else throws', new Error('boom'), ''],
+  ])('gives empty logs, and does not throw, when %s', async (_name, pods, text) => {
     expect(await setup(pods, text).podLogs.forTicket(RUN, 'apply', 'be', null, NOW)).toEqual(empty)
   })
 

@@ -750,7 +750,7 @@ describe('POST /api/pipeline/notify', () => {
         await notify({ deployId: id, stage, result: 'failed', failure: noLogs })
         const { ticket } = bodyOf(callsTo(AI_URL)[0])
         expect(cluster.pods).toHaveBeenCalledWith('my-app')
-        expect(cluster.logs).toHaveBeenCalledWith('my-app', 'be-a-7d9', { container: 'be', tailLines: 200, sinceSeconds: 600, previous: false })
+        expect(cluster.logs).toHaveBeenCalledWith('my-app', 'be-a-7d9', { container: 'be', tailLines: 200, previous: false })
         expect(ticket.logs.lines).toEqual(['listening', expect.stringContaining('[REDACTED]') as string])
         expect(JSON.stringify(ticket)).not.toContain('hunter2pass')
         expect(JSON.stringify(ticket)).not.toContain(`ghp_${'a'.repeat(36)}`)
@@ -777,7 +777,7 @@ describe('POST /api/pipeline/notify', () => {
 
       it.each([
         ['listing the pods fails', () => cluster.pods.mockRejectedValue(new ClusterError('unreachable'))],
-        ['reading the log fails', () => (cluster.pods.mockResolvedValue([pod()]), cluster.logs.mockRejectedValue(new ClusterError('unexpected', 400)))],
+        ['reading the log fails', () => { cluster.pods.mockResolvedValue([pod()]); cluster.logs.mockRejectedValue(new ClusterError('unexpected', 400)) }],
       ])('still sends the ticket, with empty logs, when %s', async (_name, breakIt) => {
         breakIt()
         const id = await reach('apply')

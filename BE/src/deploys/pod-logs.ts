@@ -1,21 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ClusterError } from '../k8s/cluster-error.js'
 import { ClusterReader } from '../k8s/cluster-reader.js'
-import type { Stage } from './deploy-run.js'
+import type { Stage, TicketEvidence } from './deploy-run.js'
+import type { DeployRunRow } from './deploys.store.js'
 
-export interface TicketLogs {
-  from: string
-  to: string
-  lines: string[]
-}
+type TicketLogs = NonNullable<TicketEvidence['logs']>
 
 const MAX_LINES = 200
-const WINDOW_SECONDS = 600
+const WINDOW_MS = 10 * 60_000
 
 /**
  * 문제 티켓의 `logs`(docs/design/AIagent.md §5). 실행기에는 Pod 로그 권한이 없어서 apply · verify 실패의 로그는 비어서 오므로,
  * 여기서 서버 계정으로 읽어 채운다. 파이프라인이 로그를 보냈으면 그것이 우선이고, 읽기가 실패해도 티켓은 빈 로그로 간다.
  * 외부로 나가기 전의 비밀값 가림은 티켓을 만드는 쪽이 한다.
+ * `from`은 계약의 구간(알림 10분 전)을 적을 뿐 줄을 거르지는 않는다: 읽는 것은 Pod의 마지막 200줄이다.
  */
 @Injectable()
 export class PodLogs {
@@ -24,7 +22,7 @@ export class PodLogs {
   constructor(private readonly cluster: ClusterReader) {}
 
   async forTicket(
-    run: { slug: string; target_slot: string },
+    run: Pick<DeployRunRow, 'slug' | 'target_slot'>,
     stage: Stage,
     service: string | null,
     given: TicketLogs | null,
@@ -39,11 +37,10 @@ export class PodLogs {
       const pod = pods.find((p) => !p.ready) ?? pods[0]
       if (!pod) return fallback
       // 다시 시작한 Pod의 현재 컨테이너는 막 떴으므로 죽은 직전 컨테이너를 읽는다.
-      const text = await this.cluster.logs(run.slug, pod.name, { container: service, tailLines: MAX_LINES, sinceSeconds: WINDOW_SECONDS, previous: pod.restarts > 0 })
-      const body = text.replace(/\n$/, '')
+      const text = await this.cluster.logs(run.slug, pod.name, { container: service, tailLines: MAX_LINES, previous: pod.restarts > 0 })
+      const body = text.trimEnd()
       if (body === '') return fallback
-      const lines = body.split('\n')
-      return { from: new Date(now.getTime() - WINDOW_SECONDS * 1000).toISOString(), to: now.toISOString(), lines: lines.slice(-MAX_LINES) }
+      return { from: new Date(now.getTime() - WINDOW_MS).toISOString(), to: now.toISOString(), lines: body.split('\n').slice(-MAX_LINES) }
     } catch (err) {
       // 로그가 없어도 티켓은 간다. 원인은 클러스터 쪽 상태만 남긴다(메시지에 값이 있을 수 있다).
       this.logger.warn(`Pod logs of ${run.slug}/${service} not read: ${err instanceof ClusterError ? `${err.kind} ${err.apiStatus ?? ''}`.trim() : 'error'}`)

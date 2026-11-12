@@ -114,23 +114,17 @@ export class ClusterReader {
     return items.map(withoutBookkeeping)
   }
 
-  /** Pod 로그의 끝부분. `tailLines`는 기본 200, 최대 2000이고 응답은 256 KiB에서 잘린다. `sinceSeconds`면 그 초 안의 줄만, `previous`면 직전 컨테이너의 로그다. */
+  /** Pod 로그의 끝부분. `tailLines`는 기본 200, 최대 2000이고 응답은 256 KiB에서 잘린다. `previous`면 직전 컨테이너의 로그다. */
   async logs(
     slug: string,
     pod: string,
-    {
-      container,
-      tailLines = DEFAULT_TAIL,
-      previous = false,
-      sinceSeconds,
-    }: { container?: string; tailLines?: number; previous?: boolean; sinceSeconds?: number } = {},
+    { container, tailLines = DEFAULT_TAIL, previous = false }: { container?: string; tailLines?: number; previous?: boolean } = {},
   ): Promise<string> {
     // 요청 경로와 쿼리에 들어가는 값이다.
     if (!POD_NAME.test(pod)) throw new Error(`Not a valid pod name: ${JSON.stringify(pod)}`)
     if (container !== undefined && !CONTAINER_NAME.test(container)) throw new Error(`Not a valid container name: ${JSON.stringify(container)}`)
     if (!Number.isInteger(tailLines) || tailLines < 1) throw new Error(`Not a valid tailLines: ${JSON.stringify(tailLines)}`)
-    if (sinceSeconds !== undefined && (!Number.isInteger(sinceSeconds) || sinceSeconds < 1)) throw new Error(`Not a valid sinceSeconds: ${JSON.stringify(sinceSeconds)}`)
-    const query = `tailLines=${Math.min(tailLines, MAX_TAIL)}&limitBytes=${MAX_LOG_BYTES}${container ? `&container=${container}` : ''}${previous ? '&previous=true' : ''}${sinceSeconds ? `&sinceSeconds=${sinceSeconds}` : ''}`
+    const query = `tailLines=${Math.min(tailLines, MAX_TAIL)}&limitBytes=${MAX_LOG_BYTES}${container ? `&container=${container}` : ''}${previous ? '&previous=true' : ''}`
     return this.k8s.request('GET', `/api/v1/namespaces/${space(slug)}/pods/${pod}/log?${query}`)
   }
 
