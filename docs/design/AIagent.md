@@ -41,7 +41,7 @@
 | 감지 (배포 중) | GoCD 스테이지가 한다. Build는 CodeBuild 결과, Apply는 대상 슬롯 Pod · 이벤트 watch(`CrashLoopBackOff` · `OOMKilled` · 쿼터 초과 `FailedCreate`는 제한 시간을 기다리지 않고 바로 실패), Verify는 Traefik 요청 결과 ([배포 워크플로우](deploy-workflow.md) §4 제한 시간) |
 | 감지 (운영 중) | 플랫폼 서버가 리더 k3s API에 Pod · 이벤트 watch 연결을 유지한다. 로그는 계속 받지 않는다 |
 | 알림 | 실패한 GoCD job의 `run_if: failed` task가 그 즉시 플랫폼 서버에 알린다 |
-| 전달 | 플랫폼 서버가 그 순간의 원본 · 최근 10분 로그를 잡아 비밀값을 가리고 문제 티켓으로 보낸다 |
+| 전달 | 플랫폼 서버가 그 순간의 원본 · 최근 로그(최대 200줄)를 잡아 비밀값을 가리고 문제 티켓으로 보낸다 |
 | 수집 | 에이전트가 티켓의 `stage` · `service`로 실패한 단계에서 바로 고치기 시작하고, 지금 상태는 관찰 도구(§3)로 그때그때 읽는다 |
 
 티켓의 역할은 넷이다: 에이전트 실행을 여는 시작 신호, 재시작하면 사라지는 실패 순간의 증거 보관, 횟수 제한 · 해결 결과 · 종료 알림 · `previous`를 묶는 일의 단위(`ticketId`), 코드 분류(§8 `match`)의 입력. 에이전트가 아는 정보가 티켓이 전부라는 뜻은 아니다.
@@ -177,7 +177,7 @@ AI 서버 (에이전트) → 플랫폼 서버 MCP 게이트웨이 → GoCD 서�
 | `raw.k8s.events` | `involvedObject`가 대상 슬롯 리소스인 이벤트 원본 (없으면 `[]`) |
 | `raw.k8s.status` | `render`일 때 server-side apply dry-run에 k3s API가 돌려준 Status 원본(필수), 그 밖에는 `null` |
 | `errorMessage` | 사람이 읽는 오류 한 줄. `render`면 Status의 `message`를 그대로 넣는다. `verify`면 통과하지 못한 검사 하나(요청한 경로와 응답 상태, 또는 Ready가 아닌 Pod · 엔드포인트가 빈 Service)를 적고, `raw.k8s`에는 그 서비스의 Pod와 이벤트를 넣는다 |
-| `logs` | 오류 시각 10분 전부터, 최대 200줄. 재시작한 Pod는 직전 컨테이너 로그. `apply` · `verify`의 로그는 실행기에 Pod 로그 권한이 없어 BE가 채운다(읽지 못하면 빈 로그) |
+| `logs` | 최대 200줄. Pod 로그는 Pod의 마지막 200줄이다(시간으로 자르지 않는다: 재시작을 반복하는 Pod는 직전 출력이 10분보다 오래됐을 수 있다). 재시작한 Pod는 직전 컨테이너 로그. `from`은 알림 10분 전, `to`는 읽은 시각이라 실제 줄 범위와 다를 수 있다. `apply` · `verify`의 로그는 실행기에 Pod 로그 권한이 없어 BE가 채운다(읽지 못하면 빈 로그) |
 | `previous` | 직전 티켓. 없으면 `null`. `status`는 `verified` · `pr_opened` · `needs_user` · `gave_up`(그 티켓의 해결 결과) 또는 `stopped`(결과 없이 끝남) |
 
 모든 칸은 보내기 전에 외부 전송 필터로 비밀값처럼 보이는 문자열을 가린다.
