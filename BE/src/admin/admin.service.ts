@@ -1,5 +1,6 @@
-import { ConflictException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common'
 import type { AuthUser } from '../auth/auth.decorators.js'
+import { isRecord } from '../common/is-record.js'
 import { SLUG } from '../deploys/deploy-input.js'
 import { publicUrl } from '../deploys/deploy-run.js'
 import { ClusterError } from '../k8s/cluster-error.js'
@@ -66,6 +67,18 @@ async function readList<T>(read: Promise<T[]>, goneIsEmpty = false): Promise<T[]
     if (goneIsEmpty && err instanceof ClusterError && (err.kind === 'forbidden' || err.kind === 'not_found')) return []
     throw asHttp(err)
   }
+}
+
+const MAX_REASON = 200
+
+/** 중지 사유: `{ reason }`의 문자열. 앞뒤 공백을 떼고 1–200자(글자 수), 줄바꿈 같은 제어 문자는 받지 않는다. */
+function parseReason(body: unknown): string {
+  const reason = isRecord(body) && typeof body.reason === 'string' ? body.reason.trim() : ''
+  const length = [...reason].length
+  if (length < 1 || length > MAX_REASON || /\p{Cc}/u.test(reason)) {
+    throw new BadRequestException({ code: 'INVALID_REASON', message: `reason must be 1 to ${MAX_REASON} characters without control characters` })
+  }
+  return reason
 }
 
 @Injectable()
@@ -149,9 +162,10 @@ export class AdminService {
     return { services, usageStatus: usages === null ? ('not_collected' as const) : ('collected' as const) }
   }
 
-  /** 프로젝트의 Deployment를 모두 replicas 0으로 내리고, 하나라도 내렸으면 누가 했는지 기록한다. */
-  async stop(actor: AuthUser, slug: string) {
+  /** 프로젝트의 Deployment를 모두 replicas 0으로 내리고, 하나라도 내렸으면 누가 왜 했는지 기록한다. 사유는 학생 화면에 그대로 보인다. */
+  async stop(actor: AuthUser, slug: string, body: unknown) {
     if (!SLUG.test(slug) || !(await this.store.projectExists(slug))) throw projectNotFound()
+    const reason = parseReason(body)
     const deployments = await readList(this.reader.deployments(slug), true)
     const names = deployments.map((d) => d.name).filter((n) => K8S_NAME.test(n))
     if (names.length === 0) throw new ConflictException({ code: 'NOT_RUNNING', message: 'Nothing is running for this project' })
@@ -167,7 +181,7 @@ export class AdminService {
       throw asHttp(reasons.find((r) => r instanceof ClusterError && r.kind === 'forbidden') ?? reasons[0])
     }
     // 기록하지 못하면 503이다. 이미 내린 것은 그대로지만 같은 요청을 다시 보내도 안전하다(replicas 0을 다시 쓰고 기록을 남긴다).
-    await this.store.recordStop(slug, actor)
+    await this.store.recordStop(slug, actor, reason)
     return { slug, scaled, failed }
   }
 }

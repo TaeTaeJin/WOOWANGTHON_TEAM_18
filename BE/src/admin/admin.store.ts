@@ -20,6 +20,8 @@ export interface ProjectRecord {
 export interface StopRecord {
   at: string
   by: string
+  /** 운영자가 적은 사유. 사유 칸이 생기기 전의 기록은 null */
+  reason: string | null
 }
 
 const str = (v: unknown): v is string => typeof v === 'string'
@@ -67,17 +69,17 @@ export class AdminStore {
 
   /** 프로젝트마다 가장 최근의 강제 중지 기록. */
   async lastStops(): Promise<Map<string, StopRecord>> {
-    const rows = await this.call('admin_actions', 'GET', { select: 'slug,actor_email,created_at', action: 'eq.stop', order: 'created_at.desc', limit: String(MAX_ROWS) })
+    const rows = await this.call('admin_actions', 'GET', { select: 'slug,actor_email,created_at,reason', action: 'eq.stop', order: 'created_at.desc', limit: String(MAX_ROWS) })
     const out = new Map<string, StopRecord>()
     for (const row of rows) {
-      if (!isRecord(row) || !str(row.slug) || !str(row.actor_email) || !str(row.created_at)) throw this.unreadable('admin_actions')
-      if (!out.has(row.slug)) out.set(row.slug, { at: new Date(row.created_at).toISOString(), by: row.actor_email })
+      if (!isRecord(row) || !str(row.slug) || !str(row.actor_email) || !str(row.created_at) || (row.reason !== null && !str(row.reason))) throw this.unreadable('admin_actions')
+      if (!out.has(row.slug)) out.set(row.slug, { at: new Date(row.created_at).toISOString(), by: row.actor_email, reason: row.reason })
     }
     return out
   }
 
-  async recordStop(slug: string, actor: { id: string; email: string }): Promise<void> {
-    await this.call('admin_actions', 'POST', {}, { slug, action: 'stop', actor_id: actor.id, actor_email: actor.email })
+  async recordStop(slug: string, actor: { id: string; email: string }, reason: string): Promise<void> {
+    await this.call('admin_actions', 'POST', {}, { slug, action: 'stop', actor_id: actor.id, actor_email: actor.email, reason })
   }
 
   private async call(table: string, method: 'GET' | 'POST', query: Record<string, string>, body?: object): Promise<unknown[]> {

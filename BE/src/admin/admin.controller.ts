@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common'
 import { CurrentUser } from '../auth/auth.decorators.js'
 import type { AuthUser } from '../auth/auth.decorators.js'
 import { AdminGuard } from './admin.guard.js'
@@ -21,7 +21,7 @@ export class AdminController {
 
   @Post('projects/:slug/stop')
   @HttpCode(200)
-  stop(@CurrentUser() user: AuthUser, @Param('slug') slug: string) {
-    return this.admin.stop(user, slug)
+  stop(@CurrentUser() user: AuthUser, @Param('slug') slug: string, @Body() body: unknown) {
+    return this.admin.stop(user, slug, body)
   }
 }

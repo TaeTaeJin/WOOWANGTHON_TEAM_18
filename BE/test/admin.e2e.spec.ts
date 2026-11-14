@@ -260,8 +260,8 @@ describe('GET /api/admin/projects', () => {
     seedProject('old-app', 'other', 1)
     db.projects = [{ slug: 'my-app', live_slot: 'a' }]
     db.admin_actions = [
-      { slug: 'my-app', action: 'stop', actor_email: 'older@example.com', created_at: '2026-11-10T02:00:00.000Z' },
-      { slug: 'my-app', action: 'stop', actor_email: 'op@example.com', created_at: '2026-11-11T02:00:00.000Z' },
+      { slug: 'my-app', action: 'stop', actor_email: 'older@example.com', reason: null, created_at: '2026-11-10T02:00:00.000Z' },
+      { slug: 'my-app', action: 'stop', actor_email: 'op@example.com', reason: '점검', created_at: '2026-11-11T02:00:00.000Z' },
     ]
     space('my-app', [deployment('fe-a'), deployment('be-a', 0, 0), deployment('fe', 2, 1)], [pod('fe-a-6d9f8c7b5-xk2ab', 3), pod('fe-6d9f8c7b5-aaaaa', 0, false), pod('be-a-5c4d-bbbbb'), pod('fe-a-extra-6d9f8c7b5-zzzzz'), pod('fe-a-6d9f8c7b5-toolong1')])
     // fe-a는 컨테이너 둘의 합(41m, 21Mi). fe의 Pod는 첫 수집 전이라 목록에 없다. 이름이 겹치는 다른 서비스의 Pod 값은 섞이지 않는다.
@@ -278,7 +278,7 @@ describe('GET /api/admin/projects', () => {
     expect(projects.map((p) => p.slug)).toEqual(['my-app', 'old-app'])
     expect(projects[0]).toEqual({
       slug: 'my-app', repo: 'Student/my-app', ownerId: USER, liveSlot: 'a', url: 'https://my-app.stairnoworks.com', clusterError: null,
-      lastStop: { at: '2026-11-11T02:00:00.000Z', by: 'op@example.com' },
+      lastStop: { at: '2026-11-11T02:00:00.000Z', by: 'op@example.com', reason: '점검' },
       usageStatus: 'collected',
       services: [
         { name: 'fe-a', slot: 'a', replicas: 1, readyReplicas: 1, restarts: 3, usage: { cpuMillicores: 41, memoryBytes: 21 * 1024 ** 2 }, pods: [{ name: 'fe-a-6d9f8c7b5-xk2ab', phase: 'Running', ready: true, node: 'worker-1', restarts: 3 }] },
@@ -359,33 +359,55 @@ describe('GET /api/admin/projects', () => {
 })
 
 describe('POST /api/admin/projects/:slug/stop', () => {
+  const REASON = '학교 규칙에 어긋나는 내용이 있어요'
+  const stop = async (path: string, body: unknown = { reason: REASON }) =>
+    request(app.getHttpServer()).post(path).set({ Authorization: await adminAuth() }).send(body as object)
   const stopPath = '/api/admin/projects/my-app/stop'
 
   it('scales every Deployment of the project to 0 and records who asked', async () => {
     seedProject()
     space('my-app', [deployment('fe-a'), deployment('be-a')])
-    const res = await call('post', stopPath, undefined)
+    const res = await stop(stopPath)
     expect(res.status).toBe(200)
     expect(res.body).toEqual({ slug: 'my-app', scaled: ['fe-a', 'be-a'], failed: [] })
     expect(scaled).toEqual([{ slug: 'my-app', name: 'fe-a' }, { slug: 'my-app', name: 'be-a' }])
-    expect(db.admin_actions).toEqual([expect.objectContaining({ slug: 'my-app', action: 'stop', actor_id: ADMIN, actor_email: 'op@example.com' })])
+    expect(db.admin_actions).toEqual([expect.objectContaining({ slug: 'my-app', action: 'stop', actor_id: ADMIN, actor_email: 'op@example.com', reason: REASON })])
   })
 
-  it('accepts the empty JSON body the FE sends', async () => {
+  it('stores the trimmed reason', async () => {
     seedProject()
     space('my-app', [deployment('fe-a')])
-    const res = await request(app.getHttpServer())
-      .post(stopPath)
-      .set({ Authorization: await adminAuth(), 'Content-Type': 'application/json' })
-      .send({})
-    expect(res.status).toBe(200)
+    expect((await stop(stopPath, { reason: `  ${REASON}  ` })).status).toBe(200)
+    expect(db.admin_actions[0]).toMatchObject({ reason: REASON })
+  })
+
+  it.each([
+    ['an empty body', {}],
+    ['a reason that is not a string', { reason: 5 }],
+    ['a blank reason', { reason: '   ' }],
+    ['a reason of 201 characters', { reason: 'ㄱ'.repeat(201) }],
+    ['a reason with a line break', { reason: '첫 줄\n둘째 줄' }],
+  ])('answers 400 INVALID_REASON for %s and stops nothing', async (_what, body) => {
+    seedProject()
+    space('my-app', [deployment('fe-a')])
+    const res = await stop(stopPath, body)
+    expect(res.status).toBe(400)
+    expect(res.body).toEqual(errorBody('INVALID_REASON'))
+    expect(scaled).toEqual([])
+    expect(db.admin_actions ?? []).toEqual([])
+  })
+
+  it('accepts a reason of exactly 200 characters', async () => {
+    seedProject()
+    space('my-app', [deployment('fe-a')])
+    expect((await stop(stopPath, { reason: 'ㄱ'.repeat(200) })).status).toBe(200)
   })
 
   it('reports the ones that could not be scaled and still answers 200 when some were', async () => {
     seedProject()
     space('my-app', [deployment('fe-a'), deployment('be-a')])
     scaleFails['be-a'] = new ClusterError('unreachable')
-    const res = await call('post', stopPath, undefined)
+    const res = await stop(stopPath)
     expect(res.status).toBe(200)
     expect(res.body).toEqual({ slug: 'my-app', scaled: ['fe-a'], failed: ['be-a'] })
   })
@@ -394,7 +416,7 @@ describe('POST /api/admin/projects/:slug/stop', () => {
     seedProject()
     space('my-app', [deployment('fe-a')])
     scaleFails['fe-a'] = new ClusterError('forbidden', 403)
-    const res = await call('post', stopPath, undefined)
+    const res = await stop(stopPath)
     expect(res.status).toBe(503)
     expect(res.body).toEqual(errorBody('CLUSTER_FORBIDDEN'))
     expect(scaled).toEqual([])
@@ -405,14 +427,14 @@ describe('POST /api/admin/projects/:slug/stop', () => {
     space('my-app', [deployment('fe-a'), deployment('be-a')])
     scaleFails['fe-a'] = new ClusterError('unreachable')
     scaleFails['be-a'] = new ClusterError('forbidden', 403)
-    expect((await call('post', stopPath, undefined)).body).toEqual(errorBody('CLUSTER_FORBIDDEN'))
+    expect((await stop(stopPath)).body).toEqual(errorBody('CLUSTER_FORBIDDEN'))
   })
 
   it('answers 503 CLUSTER_UNREACHABLE when the leader does not answer', async () => {
     seedProject()
     space('my-app', [deployment('fe-a')])
     scaleFails['fe-a'] = new ClusterError('unreachable')
-    expect((await call('post', stopPath, undefined)).body).toEqual(errorBody('CLUSTER_UNREACHABLE'))
+    expect((await stop(stopPath)).body).toEqual(errorBody('CLUSTER_UNREACHABLE'))
   })
 
   it('answers 404 for an unknown project or a slug that is not a slug (even one that is somehow in the database), and never reaches the cluster', async () => {
@@ -421,7 +443,7 @@ describe('POST /api/admin/projects/:slug/stop', () => {
     seedProject('a'.repeat(60))
     const spies = [vi.spyOn(reader, 'deployments'), vi.spyOn(scaler, 'scaleToZero')]
     for (const slug of ['nope', 'Bad_Slug', '..', 'a'.repeat(60)]) {
-      const res = await call('post', `/api/admin/projects/${slug}/stop`, undefined)
+      const res = await stop(`/api/admin/projects/${slug}/stop`)
       expect(res.status).toBe(404)
       expect(res.body).toEqual(errorBody('PROJECT_NOT_FOUND'))
     }
@@ -433,7 +455,7 @@ describe('POST /api/admin/projects/:slug/stop', () => {
     seedProject()
     for (const items of [undefined, []]) {
       if (items) space('my-app', items)
-      const res = await call('post', stopPath, undefined)
+      const res = await stop(stopPath)
       expect(res.status).toBe(409)
       expect(res.body).toEqual(errorBody('NOT_RUNNING'))
     }
@@ -444,11 +466,11 @@ describe('POST /api/admin/projects/:slug/stop', () => {
     seedProject()
     space('my-app', [deployment('fe-a')])
     restOverride = (table, method) => (table === 'admin_actions' && method === 'POST' ? new Response('{}', { status: 500 }) : undefined)
-    const res = await call('post', stopPath, undefined)
+    const res = await stop(stopPath)
     expect(res.status).toBe(503)
     expect(res.body).toEqual(errorBody('DATABASE_UNAVAILABLE'))
     restOverride = undefined
-    expect((await call('post', stopPath, undefined)).status).toBe(200)
+    expect((await stop(stopPath)).status).toBe(200)
     expect(db.admin_actions).toHaveLength(1)
   })
 
@@ -456,14 +478,14 @@ describe('POST /api/admin/projects/:slug/stop', () => {
     seedProject()
     space('my-app', [deployment('fe-a')])
     scaleFails['fe-a'] = new ClusterError('forbidden', 403)
-    await call('post', stopPath, undefined)
+    await stop(stopPath)
     expect(db.admin_actions ?? []).toEqual([])
   })
 
   it('does not build a request path from a cluster-supplied name that is not a name', async () => {
     seedProject()
     space('my-app', [deployment('fe-a'), deployment('../../x')])
-    const res = await call('post', stopPath, undefined)
+    const res = await stop(stopPath)
     expect(res.body).toEqual({ slug: 'my-app', scaled: ['fe-a'], failed: [] })
   })
 })

@@ -575,6 +575,82 @@ describe('deploy queue', () => {
   })
 })
 
+describe('stopped by an operator (UC-12)', () => {
+  const RUN_AT = '2026-11-12T01:00:00.000Z'
+  const stopAt = (created_at: string, reason: string | null = '학교 규칙 위반') =>
+    (db.admin_actions ??= []).push({ slug: 'my-app', action: 'stop', actor_id: OTHER, actor_email: 'op@example.com', reason, created_at })
+  const succeeded = (id: string, created_at = RUN_AT) =>
+    (db.deploy_runs ??= []).push({ deploy_id: id, user_id: USER, slug: 'my-app', status: 'succeeded', stage: null, target_slot: 'a', input: {}, failure: null, created_at, updated_at: created_at })
+  const stoppedOf = async (id: string) => ((await status(id)).body as { stoppedByAdmin: unknown }).stoppedByAdmin
+
+  it('tells the owner when and why, and never who', async () => {
+    const id = seedDeploy()
+    succeeded(id)
+    stopAt('2026-11-12T02:00:00.000Z')
+    const res = await status(id)
+    expect((res.body as { stoppedByAdmin: unknown }).stoppedByAdmin).toEqual({ at: '2026-11-12T02:00:00.000Z', reason: '학교 규칙 위반' })
+    expect(JSON.stringify(res.body)).not.toContain('op@example.com')
+    expect(JSON.stringify(res.body)).not.toContain(OTHER)
+  })
+
+  it('has a null reason for a stop recorded before reasons existed', async () => {
+    const id = seedDeploy()
+    succeeded(id)
+    stopAt('2026-11-12T02:00:00.000Z', null)
+    expect(await stoppedOf(id)).toEqual({ at: '2026-11-12T02:00:00.000Z', reason: null })
+  })
+
+  it('uses the latest stop of the project', async () => {
+    const id = seedDeploy()
+    succeeded(id)
+    stopAt('2026-11-12T02:00:00.000Z', '첫 번째')
+    stopAt('2026-11-12T03:00:00.000Z', '두 번째')
+    expect(await stoppedOf(id)).toMatchObject({ reason: '두 번째' })
+  })
+
+  it('does not show a stop from before the latest run (deploying again clears it)', async () => {
+    const first = seedDeploy()
+    succeeded(first)
+    stopAt('2026-11-12T02:00:00.000Z')
+    const second = seedDeploy()
+    succeeded(second, '2026-11-12T03:00:00.000Z')
+    expect(await stoppedOf(first)).toBeNull()
+    expect(await stoppedOf(second)).toBeNull()
+  })
+
+  it('shows it only on the deploy of the latest run, and not on a project that was never stopped', async () => {
+    const older = seedDeploy()
+    succeeded(older)
+    const newer = seedDeploy()
+    succeeded(newer, '2026-11-12T01:30:00.000Z')
+    stopAt('2026-11-12T02:00:00.000Z')
+    expect(await stoppedOf(older)).toBeNull()
+    expect(await stoppedOf(newer)).not.toBeNull()
+    const other = seedDeploy({ slug: 'other-app' })
+    succeeded(other)
+    ;db.deploy_runs[2].slug = 'other-app'
+    expect(await stoppedOf(other)).toBeNull()
+  })
+
+  it('is on the list items too', async () => {
+    const id = seedDeploy()
+    succeeded(id)
+    stopAt('2026-11-12T02:00:00.000Z')
+    const { deploys } = (await list()).body as { deploys: { id: string; stoppedByAdmin: unknown }[] }
+    expect(deploys.find((d) => d.id === id)?.stoppedByAdmin).toEqual({ at: '2026-11-12T02:00:00.000Z', reason: '학교 규칙 위반' })
+  })
+
+  it('still answers when the stop records cannot be read', async () => {
+    const id = seedDeploy()
+    succeeded(id)
+    stopAt('2026-11-12T02:00:00.000Z')
+    restOverride = (table, method) => (table === 'admin_actions' && method === 'GET' ? new Response('{}', { status: 500 }) : undefined)
+    const res = await status(id)
+    expect(res.status).toBe(200)
+    expect((res.body as { stoppedByAdmin: unknown }).stoppedByAdmin).toBeNull()
+  })
+})
+
 describe('GET /api/deploys/:id/status', () => {
   it('shows a saved deploy that was not started as waiting at the secrets step', async () => {
     const id = seedDeploy()
@@ -600,6 +676,7 @@ describe('GET /api/deploys/:id/status', () => {
       // 시험 서버에는 TRIVY_CACHE_DIR이 없어 보안 검사를 돌리지 않는다. 그 사실을 경고로 알린다("문제 없음"이 아니다).
       warnings: [{ code: 'SCAN_UNAVAILABLE', message: '이 서버에는 보안 검사가 설정되어 있지 않아 검사하지 못했어요.', service: null }],
       queue: null,
+      stoppedByAdmin: null,
       updatedAt: '2026-11-11T01:00:00.000Z',
     })
   })
@@ -750,8 +827,8 @@ describe('GET /api/deploys', () => {
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       deploys: [
-        { id: newer, repo: 'Student/My-App', slug: 'my-app', commit: SHA, createdAt: expect.any(String) as string, status: 'running', stage: 'build', url: null },
-        { id: older, repo: 'Student/My-App', slug: 'old-app', commit: SHA, createdAt: expect.any(String) as string, status: 'not_started', stage: null, url: null },
+        { id: newer, repo: 'Student/My-App', slug: 'my-app', commit: SHA, createdAt: expect.any(String) as string, status: 'running', stage: 'build', url: null, stoppedByAdmin: null },
+        { id: older, repo: 'Student/My-App', slug: 'old-app', commit: SHA, createdAt: expect.any(String) as string, status: 'not_started', stage: null, url: null, stoppedByAdmin: null },
       ],
     })
   })

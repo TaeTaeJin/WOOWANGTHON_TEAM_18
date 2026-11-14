@@ -98,7 +98,7 @@ export class StoreConflict extends Error {
   }
 }
 
-type Table = 'deploys' | 'projects' | 'build_cache' | 'deploy_runs' | 'deploy_secrets' | 'security_scans'
+type Table = 'deploys' | 'projects' | 'build_cache' | 'deploy_runs' | 'deploy_secrets' | 'security_scans' | 'admin_actions'
 
 /**
  * `deploys` · `projects` · `build_cache` 테이블 접근. 서버의 secret key로 Supabase PostgREST를 부른다(RLS를 건너뛴다). 그래서 어떤 행을 읽고 쓸지는 이 클래스를 부르는 쪽이
@@ -253,6 +253,30 @@ export class DeploysStore {
     const rows = await this.call('deploys', 'GET', { select: '*', user_id: `eq.${userId}`, order: 'created_at.desc', limit: String(limit) })
     if (!rows.every(isRow)) throw this.unreadable('deploys', 'GET')
     return rows
+  }
+
+  /** 프로젝트마다 가장 최근에 시작한 실행(어느 배포의 것인지와 시각). 실행이 없는 프로젝트는 빠진다. slug는 DB에서 읽은 값이다(검증된 모양). */
+  async latestRuns(slugs: string[]): Promise<Map<string, { deploy_id: string; created_at: string }>> {
+    const out = new Map<string, { deploy_id: string; created_at: string }>()
+    if (slugs.length === 0) return out
+    const rows = await this.call('deploy_runs', 'GET', { select: 'deploy_id,slug,created_at', slug: `in.(${slugs.join(',')})`, order: 'created_at.desc' })
+    for (const row of rows) {
+      if (!isRecord(row) || typeof row.deploy_id !== 'string' || typeof row.slug !== 'string' || typeof row.created_at !== 'string') throw this.unreadable('deploy_runs', 'GET')
+      if (!out.has(row.slug)) out.set(row.slug, { deploy_id: row.deploy_id, created_at: row.created_at })
+    }
+    return out
+  }
+
+  /** 프로젝트마다 가장 최근의 운영자 강제 중지(시각과 사유). 운영자의 신원은 읽지 않는다. 사유 칸이 생기기 전의 기록은 사유가 null이다. */
+  async lastAdminStops(slugs: string[]): Promise<Map<string, { created_at: string; reason: string | null }>> {
+    const out = new Map<string, { created_at: string; reason: string | null }>()
+    if (slugs.length === 0) return out
+    const rows = await this.call('admin_actions', 'GET', { select: 'slug,reason,created_at', action: 'eq.stop', slug: `in.(${slugs.join(',')})`, order: 'created_at.desc' })
+    for (const row of rows) {
+      if (!isRecord(row) || typeof row.slug !== 'string' || typeof row.created_at !== 'string' || (row.reason !== null && typeof row.reason !== 'string')) throw this.unreadable('admin_actions', 'GET')
+      if (!out.has(row.slug)) out.set(row.slug, { created_at: row.created_at, reason: row.reason })
+    }
+    return out
   }
 
   /** 주어진 배포들의 실행 기록. 시작하지 않은 배포는 없다. */

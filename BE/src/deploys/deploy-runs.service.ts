@@ -57,7 +57,14 @@ export interface DeployStatusView {
   warnings: DeployWarning[]
   /** 배포 대기(`queued`)일 때만. position은 앞에 있는 배포 수(먼저 기다리는 배포 + 지금 도는 배포), waitingForRoom은 클러스터에 자리가 없어 기다리는 중. */
   queue: { position: number; waitingForRoom: boolean } | null
+  stoppedByAdmin: StoppedByAdmin | null
   updatedAt: string
+}
+
+/** 운영자가 이 서비스를 강제로 중지했다(UC-12). 운영자의 신원은 학생에게 보내지 않는다. 사유 칸이 생기기 전의 중지는 `reason`이 null이다. */
+export interface StoppedByAdmin {
+  at: string
+  reason: string | null
 }
 
 /** AI 에이전트의 해결 결과 중 학생에게 보일 칸(api.md "진행 상태 읽기"의 `agent`). */
@@ -87,7 +94,13 @@ function toAgent(stored: Record<string, unknown>): AgentView {
 const iso = (t: string) => new Date(t).toISOString()
 
 /** 실행 기록(없을 수 있다)에서 읽기 응답을 만든다. 원본 · 로그 · 비밀값은 저장하지 않으므로 여기 올 수 없다. */
-function view(deploy: DeployRow, run: DeployRunRow | undefined, warnings: DeployWarning[] = [], queue: DeployStatusView['queue'] = null): DeployStatusView {
+function view(
+  deploy: DeployRow,
+  run: DeployRunRow | undefined,
+  warnings: DeployWarning[] = [],
+  queue: DeployStatusView['queue'] = null,
+  stoppedByAdmin: StoppedByAdmin | null = null,
+): DeployStatusView {
   const status: DeployStatus = run?.status ?? 'not_started'
   const stage = run?.stage ?? null
   return {
@@ -101,6 +114,7 @@ function view(deploy: DeployRow, run: DeployRunRow | undefined, warnings: Deploy
     // 보안 검사 경고(#45). 목록은 이 칸을 쓰지 않아 비워 둔다.
     warnings,
     queue,
+    stoppedByAdmin,
     updatedAt: iso(run?.updated_at ?? deploy.created_at),
   }
 }
@@ -185,8 +199,32 @@ export class DeployRunsService {
     // 소유 확인과 실행 기록 읽기는 서로 기다리지 않는다. 남의 배포면 읽은 기록은 버리고 404다.
     const uuid = parseUuid(id)
     const [deploy, run] = await Promise.all([this.owned(user, id), uuid ? this.store.findRun(uuid) : undefined])
-    const queue = run?.status === 'queued' ? await this.queueView(run) : null
-    return view(deploy, run, await this.scans.warningsFor(deploy), queue)
+    const [warnings, queue, stopped] = await Promise.all([
+      this.scans.warningsFor(deploy),
+      run?.status === 'queued' ? this.queueView(run) : null,
+      this.stoppedByAdmin([deploy]),
+    ])
+    return view(deploy, run, warnings, queue, stopped.get(deploy.id) ?? null)
+  }
+
+  /**
+   * 운영자가 중지한 서비스(배포 id별). 그 프로젝트에서 가장 최근에 시작한 실행의 배포이고, 중지가 그 실행보다 나중일 때만이다(다시 배포하면 사라진다).
+   * 보조 정보라서 읽지 못하면 없는 것으로 두고 응답은 그대로 낸다.
+   */
+  private async stoppedByAdmin(deploys: DeployRow[]): Promise<Map<string, StoppedByAdmin>> {
+    const out = new Map<string, StoppedByAdmin>()
+    try {
+      const slugs = [...new Set(deploys.map((d) => d.slug))]
+      const [stops, latest] = await Promise.all([this.store.lastAdminStops(slugs), this.store.latestRuns(slugs)])
+      for (const d of deploys) {
+        const stop = stops.get(d.slug)
+        const run = latest.get(d.slug)
+        if (stop && run?.deploy_id === d.id && Date.parse(stop.created_at) > Date.parse(run.created_at)) out.set(d.id, { at: iso(stop.created_at), reason: stop.reason })
+      }
+    } catch (err) {
+      this.logger.error(`could not read admin stops: ${err instanceof Error ? err.name : 'error'}`)
+    }
+    return out
   }
 
   private async queueView(run: DeployRunRow): Promise<NonNullable<DeployStatusView['queue']>> {
@@ -197,11 +235,12 @@ export class DeployRunsService {
   async list(user: AuthUser, rawLimit: unknown) {
     const limit = parseLimit(rawLimit)
     const deploys = await this.store.listOwned(user.id, limit)
-    const runs = new Map((await this.store.findRuns(deploys.map((d) => d.id))).map((r) => [r.deploy_id, r]))
+    const [runRows, stopped] = await Promise.all([this.store.findRuns(deploys.map((d) => d.id)), this.stoppedByAdmin(deploys)])
+    const runs = new Map(runRows.map((r) => [r.deploy_id, r]))
     return {
       deploys: deploys.map((d) => {
         const v = view(d, runs.get(d.id))
-        return { id: d.id, repo: d.repo, slug: d.slug, commit: d.commit_sha, createdAt: iso(d.created_at), status: v.status, stage: v.stage, url: v.url }
+        return { id: d.id, repo: d.repo, slug: d.slug, commit: d.commit_sha, createdAt: iso(d.created_at), status: v.status, stage: v.stage, url: v.url, stoppedByAdmin: stopped.get(d.id) ?? null }
       }),
     }
   }
