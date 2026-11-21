@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
-import { isAdmin } from '../auth/isAdmin.ts'
-import { useAuth } from '../auth/useAuth.ts'
 import { primaryLinkClass } from '../components/primaryLinkClass.ts'
+import { Banner } from '../components/ui/Banner.tsx'
 import { Card } from '../components/ui/Card.tsx'
 import Logo from '../components/Logo.tsx'
 import HeroCarousel from '../landing/HeroCarousel.tsx'
@@ -11,6 +10,8 @@ import SectionNav from '../landing/SectionNav.tsx'
 import SiteFooter from '../components/SiteFooter.tsx'
 import School from '../landing/School.tsx'
 import Survey from '../landing/Survey.tsx'
+
+const GITHUB_URL = 'https://github.com/woowangthon/WOOWANGTHON_TEAM_18'
 
 const outlineLinkClass =
   'inline-flex h-8 items-center rounded-sm border border-line-strong px-3 text-sm font-bold text-fg hover:border-fg'
@@ -22,12 +23,8 @@ const steps = [
   { title: '배포하고 주소를 받아요', desc: '진행 상황이 화면에 보이고, 끝나면 접속 주소가 나와요.' },
 ]
 
-// 공개 첫 화면. 로그인한 사용자도 볼 수 있고, 그때는 로그인 · 시작하기 대신 대시보드로 가는 링크가 보인다(관리자는 /admin). 세션을 읽는 동안에는 아무것도 그리지 않는다.
+// 프로젝트 아카이브 첫 화면. 서버(BE)와 로그인은 내려갔으므로 로그인 · 시작하기 대신 종료 안내와 GitHub 링크만 둔다.
 function LandingPage() {
-  const { state } = useAuth()
-  if (state.status === 'loading') return null
-  const home = state.status === 'signedIn' ? (isAdmin(state.session) ? '/admin' : '/dashboard') : null
-
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-bg">
@@ -36,20 +33,9 @@ function LandingPage() {
             <Logo />
           </Link>
           <div className="flex items-center gap-2 py-2">
-            {home ? (
-              <Link to={home} className={primaryLinkClass}>
-                대시보드로
-              </Link>
-            ) : (
-              <>
-                <Link to="/login" className={outlineLinkClass}>
-                  로그인
-                </Link>
-                <Link to="/signup" className={primaryLinkClass}>
-                  시작하기
-                </Link>
-              </>
-            )}
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={primaryLinkClass}>
+              GitHub
+            </a>
           </div>
         </div>
       </header>
@@ -57,6 +43,10 @@ function LandingPage() {
       <SectionNav />
 
       <main className="flex-1">
+        <div className="mx-auto max-w-300 px-3 pt-6 sm:px-4">
+          <Banner variant="info">2026 AI 우왕톤 프로젝트 아카이브예요. 서비스는 종료되어 가입과 배포는 할 수 없어요.</Banner>
+        </div>
+
         <section className="mx-auto grid max-w-300 items-center gap-10 px-3 py-16 sm:px-4 sm:py-24 lg:grid-cols-2 lg:gap-16">
           <div className="flex flex-col gap-6">
             <h1 className="max-w-2xl text-2xl sm:text-3xl">GitHub 레포 하나로, 학교 PC에 배포까지</h1>
@@ -65,14 +55,13 @@ function LandingPage() {
               찾아 고쳐 보고, 끝나면 접속 주소를 받아요.
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <Link to={home ?? '/signup'} className={primaryLinkClass}>
-                {home ? '대시보드로' : '시작하기'}
-              </Link>
+              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={primaryLinkClass}>
+                GitHub에서 보기
+              </a>
               <a href="#showcase" className={outlineLinkClass}>
                 기능 둘러보기
               </a>
             </div>
-            <p className="text-sm text-muted">공개 개인 레포만 지원해요 · GitHub 연동이 필요해요</p>
           </div>
           <HeroCarousel />
         </section>
@@ -110,23 +99,12 @@ function LandingPage() {
 
         <section className="border-t border-line bg-surface">
           <div className="mx-auto flex max-w-300 flex-col items-start gap-6 px-3 py-20 sm:px-4">
-            <h2 className="max-w-2xl text-2xl sm:text-3xl">첫 배포, 지금 해 보세요</h2>
-            <p className="max-w-2xl text-lg text-muted">GitHub 레포 주소만 있으면 돼요. 막히면 AI 동료가 도와줘요.</p>
+            <h2 className="max-w-2xl text-2xl sm:text-3xl">프로젝트는 여기까지예요</h2>
+            <p className="max-w-2xl text-lg text-muted">서비스는 종료되었어요. 코드와 설계 문서는 GitHub에 남아 있어요.</p>
             <div className="flex flex-wrap items-center gap-3">
-              {home ? (
-                <Link to={home} className={primaryLinkClass}>
-                  대시보드로
-                </Link>
-              ) : (
-                <>
-                  <Link to="/signup" className={primaryLinkClass}>
-                    시작하기
-                  </Link>
-                  <Link to="/login" className={outlineLinkClass}>
-                    로그인
-                  </Link>
-                </>
-              )}
+              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={primaryLinkClass}>
+                GitHub에서 보기
+              </a>
             </div>
           </div>
         </section>

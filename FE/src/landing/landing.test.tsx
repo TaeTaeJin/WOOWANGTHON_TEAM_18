@@ -1,8 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import type { Session } from '@supabase/supabase-js'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { AuthContext, type AuthState } from '../auth/auth-context.ts'
 import LandingPage from '../pages/LandingPage.tsx'
 import HeroCarousel, { CAROUSEL_MS } from './HeroCarousel.tsx'
 
@@ -101,47 +99,37 @@ it('does not advance by itself when the visitor prefers reduced motion', () => {
   expect(caption()).toBe('4 / 4')
 })
 
-const sessionWith = (appRole?: string) =>
-  ({ user: { id: 'u', email: 'a@b.c', app_metadata: appRole ? { role: appRole } : {}, user_metadata: {} } }) as unknown as Session
-const renderLanding = (state: AuthState) =>
+const renderLanding = () =>
   render(
-    <AuthContext.Provider value={{ state, signOut: vi.fn() }}>
-      <MemoryRouter>
-        <LandingPage />
-      </MemoryRouter>
-    </AuthContext.Provider>,
+    <MemoryRouter>
+      <LandingPage />
+    </MemoryRouter>,
   )
 
-it('shows login and start links to a signed-out visitor', () => {
-  renderLanding({ status: 'signedOut', expired: false })
-  expect(screen.getAllByRole('link', { name: '로그인' })[0]?.getAttribute('href')).toBe('/login')
-  expect(screen.queryByRole('link', { name: '대시보드로' })).toBeNull()
+it('says the service has ended and offers no login or start link', () => {
+  renderLanding()
+  expect(screen.getByRole('status').textContent).toContain('서비스는 종료되어')
+  for (const name of ['로그인', '시작하기', '대시보드로']) expect(screen.queryByRole('link', { name })).toBeNull()
 })
 
-it('shows a dashboard link instead of login and start to a signed-in student', () => {
-  renderLanding({ status: 'signedIn', session: sessionWith() })
-  for (const link of screen.getAllByRole('link', { name: '대시보드로' })) expect(link.getAttribute('href')).toBe('/dashboard')
-  expect(screen.queryByRole('link', { name: '로그인' })).toBeNull()
-  expect(screen.queryByRole('link', { name: '시작하기' })).toBeNull()
-})
-
-it('sends an admin to /admin', () => {
-  renderLanding({ status: 'signedIn', session: sessionWith('admin') })
-  for (const link of screen.getAllByRole('link', { name: '대시보드로' })) expect(link.getAttribute('href')).toBe('/admin')
-})
-
-it('draws nothing while the session is loading', () => {
-  const { container } = renderLanding({ status: 'loading' })
-  expect(container.textContent).toBe('')
+it('links to the GitHub repo from the top bar, the hero and the closing section, opening a new tab safely', () => {
+  renderLanding()
+  const links = screen.getAllByRole('link', { name: /^GitHub/ })
+  expect(links).toHaveLength(3)
+  for (const link of links) {
+    expect(link.getAttribute('href')).toBe('https://github.com/woowangthon/WOOWANGTHON_TEAM_18')
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer')
+  }
 })
 
 it('labels every preview as an example', () => {
-  renderLanding({ status: 'signedOut', expired: false })
+  renderLanding()
   expect(screen.getAllByText('예시 화면')).toHaveLength(5)
 })
 
 it('explains each service type in plain words with examples and what you get', () => {
-  renderLanding({ status: 'signedOut', expired: false })
+  renderLanding()
   expect(screen.getByRole('heading', { name: '정적 웹' })).toBeTruthy()
   expect(screen.getByText(/서버 없이 브라우저가 그대로 보여 줘요/)).toBeTruthy()
   expect(screen.getByText('동아리 홈페이지 + API')).toBeTruthy()
@@ -149,13 +137,13 @@ it('explains each service type in plain words with examples and what you get', (
 })
 
 it('says only React (Vite) and Next.js work without a Dockerfile', () => {
-  renderLanding({ status: 'signedOut', expired: false })
+  renderLanding()
   expect(screen.getByText(/React\(Vite\)와 Next\.js를 올릴 수 있어요/)).toBeTruthy()
   expect(screen.queryByText(/시험해 본 목록은 아니에요/)).toBeNull()
 })
 
 it('shows the real survey numbers with their source, without the interest block or per-row answers', () => {
-  renderLanding({ status: 'signedOut', expired: false })
+  renderLanding()
   expect(screen.getByText('출처: 소프트웨어학부 대상 구글폼 설문 · 2026-10-28~11-01 · 응답 37명')).toBeTruthy()
   expect(screen.getByText('37명 중 29명 (78%)')).toBeTruthy()
   expect(screen.getByText('37명 중 25명 (68%)')).toBeTruthy()
@@ -169,7 +157,7 @@ it('shows the real survey numbers with their source, without the interest block 
 })
 
 it('proposes idle classroom PCs to the school with the real hours, their source, the caveat and the PC spec', () => {
-  const { container } = renderLanding({ status: 'signedOut', expired: false })
+  const { container } = renderLanding()
   const section = within(container.querySelector('#school') as HTMLElement)
   expect(section.getByRole('heading', { name: '강의실 PC가 쉬는 시간, 학생의 클라우드로' })).toBeTruthy()
   expect(section.getByText('출처: PC가 있는 강의실 4곳의 수업 시간표 · 2026-1 · 2026-2학기 · 평일 24시간 기준')).toBeTruthy()
@@ -184,13 +172,10 @@ it('proposes idle classroom PCs to the school with the real hours, their source,
   expect(ids.slice(-2)).toEqual(['how', 'school'])
 })
 
-it('closes with a call to action: start and login when signed out, dashboard when signed in', () => {
-  const { unmount } = renderLanding({ status: 'signedOut', expired: false })
-  expect(screen.getByRole('heading', { name: '첫 배포, 지금 해 보세요' })).toBeTruthy()
-  expect(screen.getAllByRole('link', { name: '시작하기' })).toHaveLength(3)
-  unmount()
-  renderLanding({ status: 'signedIn', session: sessionWith('admin') })
-  expect(screen.getAllByRole('link', { name: '대시보드로' })).toHaveLength(3)
+it('closes with the archive notice instead of a call to start', () => {
+  renderLanding()
+  expect(screen.getByRole('heading', { name: '프로젝트는 여기까지예요' })).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: '첫 배포, 지금 해 보세요' })).toBeNull()
 })
 
 it('shows the auto-advance toggle as an icon button that keeps its name', () => {
@@ -249,25 +234,22 @@ it('does not treat a press that starts on an arrow button as a drag', () => {
   expect(caption()).toBe('1 / 4')
 })
 
-it('keeps the section links out of the top bar and in a floating menu, the same for every sign-in state', () => {
-  for (const state of [{ status: 'signedOut', expired: false }, { status: 'signedIn', session: sessionWith() }] as AuthState[]) {
-    const { unmount } = renderLanding(state)
-    const bar = screen.getByRole('banner')
-    expect(within(bar).queryByRole('link', { name: /설문|기능 소개|지원 범위|사용 방법|학교에 제안/ })).toBeNull()
-    const menu = within(screen.getByRole('navigation', { name: '페이지 바로가기' }))
-    expect(menu.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
-      ['설문', '#survey'],
-      ['기능 소개', '#showcase'],
-      ['지원 범위', '#types'],
-      ['사용 방법', '#how'],
-      ['학교에 제안', '#school'],
-    ])
-    unmount()
-  }
+it('keeps the section links out of the top bar and in a floating menu', () => {
+  renderLanding()
+  const bar = screen.getByRole('banner')
+  expect(within(bar).queryByRole('link', { name: /설문|기능 소개|지원 범위|사용 방법|학교에 제안/ })).toBeNull()
+  const menu = within(screen.getByRole('navigation', { name: '페이지 바로가기' }))
+  expect(menu.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+    ['설문', '#survey'],
+    ['기능 소개', '#showcase'],
+    ['지원 범위', '#types'],
+    ['사용 방법', '#how'],
+    ['학교에 제안', '#school'],
+  ])
 })
 
 it('shows the logo in the footer and keeps every section on the same side margins as the top bar', () => {
-  const { container } = renderLanding({ status: 'signedOut', expired: false })
+  const { container } = renderLanding()
   expect(within(screen.getByRole('contentinfo')).getByAltText('WCP')).toBeTruthy()
   // 상단 바와 본문 구역이 같은 좌우 여백(px-3 sm:px-4)이어야 로고와 본문 가장자리가 맞는다.
   expect(container.innerHTML).not.toContain('sm:px-8')
